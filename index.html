@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>أدوات PDF المتقدمة</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #050816;
+      --bg-alt: #0b1020;
+      --accent: #4f46e5;
+      --accent-soft: rgba(79, 70, 229, 0.12);
+      --accent-strong: #6366f1;
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --border: #1f2933;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-soft: 0 18px 45px rgba(0,0,0,0.45);
+      --shadow-subtle: 0 10px 30px rgba(15,23,42,0.7);
+      --transition-fast: 0.18s ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #111827 0, #020617 40%, #000 100%);
+      color: var(--text);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1120px;
+      margin: 24px;
+      background: linear-gradient(135deg, rgba(15,23,42,0.94), rgba(3,7,18,0.98));
+      border-radius: 30px;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148,163,184,0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(31,41,55,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: linear-gradient(90deg, rgba(15,23,42,0.92), rgba(12,10,41,0.98));
+      position: relative;
+    }
+
+    header::after {
+      content: "";
+      position: absolute;
+      inset-inline: 16px;
+      bottom: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(129,140,248,0.35), transparent);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      background: radial-gradient(circle at 30% 20%, #a855f7, #4f46e5 45%, #0ea5e9 80%);
+      box-shadow: 0 0 22px rgba(96,165,250,0.65);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .brand-logo::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: 10px;
+      border: 2px solid rgba(15,23,42,0.85);
+    }
+
+    .brand-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .brand-title span.accent {
+      color: #a5b4fc;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .endpoint-pill {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15,118,110,0.22);
+      color: #6ee7b7;
+      border: 1px solid rgba(16,185,129,0.4);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .endpoint-pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34,197,94,0.98);
+    }
+
+    .endpoint-pill small {
+      direction: ltr;
+      unicode-bidi: plaintext;
+      opacity: 0.9;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+      gap: 18px;
+      padding: 18px;
+    }
+
+    @media (max-width: 860px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(30,64,175,0.25), rgba(15,23,42,0.98));
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      border: 1px solid rgba(55,65,81,0.65);
+      box-shadow: var(--shadow-subtle);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at top left, rgba(59,130,246,0.12), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(126,34,206,0.14), transparent 60%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+      background: rgba(15,23,42,0.9);
+      padding: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.7);
+    }
+
+    .tab-btn {
+      flex: 1;
+      min-width: 90px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: var(--transition-fast);
+      position: relative;
+    }
+
+    .tab-btn span.icon {
+      font-size: 13px;
+    }
+
+    .tab-btn.active {
+      background: radial-gradient(circle at top, rgba(129,140,248,0.28), rgba(30,64,175,0.9));
+      color: #e5e7ff;
+      box-shadow: 0 10px 22px rgba(55,65,81,0.9);
+    }
+
+    .tab-btn:not(.active):hover {
+      background: rgba(31,41,55,0.9);
+      color: #e5e7eb;
+    }
+
+    .tab-content {
+      display: none;
+      gap: 14px;
+      font-size: 13px;
+    }
+
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .field-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 130px;
+    }
+
+    label {
+      font-size: 12px;
+      color: #cbd5f5;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    label span.hint {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      background: rgba(15,23,42,0.9);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(75,85,99,0.9);
+      padding: 7px 9px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    input[type="number"]:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent-strong);
+      box-shadow: 0 0 0 1px rgba(94,92,255,0.55);
+    }
+
+    .file-drop {
+      position: relative;
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(99,102,241,0.7);
+      background: linear-gradient(
+        135deg,
+        rgba(15,23,42,0.98),
+        rgba(17,24,39,0.98)
+      );
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+
+    .file-drop:hover {
+      border-color: #a5b4fc;
+      background: radial-gradient(circle at top, rgba(59,130,246,0.24), rgba(17,24,39,0.98));
+    }
+
+    .file-drop input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-drop-title {
+      font-size: 13px;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-drop-title span.icon {
+      font-size: 16px;
+    }
+
+    .file-drop-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .file-meta {
+      font-size: 11px;
+      color: #e5e7eb;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      border: 1px solid rgba(148,163,184,0.45);
+      background: rgba(15,23,42,0.96);
+    }
+
+    .badge-soft {
+      background: rgba(55,65,81,0.85);
+      border-color: rgba(75,85,99,0.95);
+    }
+
+    .badge-accent {
+      background: rgba(79,70,229,0.15);
+      border-color: rgba(129,140,248,0.7);
+      color: #c7d2fe;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    button.primary {
+      border: none;
+      border-radius: 999px;
+      padding: 7px 16px;
+      font-size: 13px;
+      background: radial-gradient(circle at top, var(--accent-strong), #4338ca);
+      color: white;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 12px 24px rgba(79,70,229,0.6);
+      transition: var(--transition-fast);
+    }
+
+    button.primary[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    button.primary:hover:not([disabled]) {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 30px rgba(79,70,229,0.9);
+    }
+
+    button.secondary {
+      border-radius: 999px;
+      padding: 6px 13px;
+      font-size: 12px;
+      border: 1px solid rgba(75,85,99,0.9);
+      background: rgba(15,23,42,0.96);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: var(--transition-fast);
+    }
+
+    button.secondary:hover {
+      background: rgba(31,41,55,0.95);
+      color: #e5e7eb;
+    }
+
+    .status-area {
+      margin-top: 8px;
+      font-size: 11px;
+      min-height: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .status-line span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #6b7280;
+    }
+
+    .status-line.success span.dot {
+      background: var(--success);
+      box-shadow: 0 0 10px rgba(34,197,94,0.9);
+    }
+
+    .status-line.error span.dot {
+      background: var(--danger);
+      box-shadow: 0 0 10px rgba(248,113,113,0.9);
+    }
+
+    .status-line.active span.dot {
+      background: var(--accent-strong);
+      box-shadow: 0 0 9px rgba(129,140,248,1);
+    }
+
+    .status-line strong {
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .side-card {
+      background: linear-gradient(145deg, rgba(15,23,42,0.97), rgba(15,23,42,0.96));
+      border-radius: var(--radius-lg);
+      padding: 14px 14px 16px;
+      border: 1px solid rgba(55,65,81,0.85);
+      box-shadow: var(--shadow-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .side-card::before {
+      content: "";
+      position: absolute;
+      inset: -35%;
+      background:
+        radial-gradient(circle at top right, rgba(56,189,248,0.20), transparent 55%),
+        radial-gradient(circle at bottom left, rgba(129,140,248,0.16), transparent 60%);
+      pointer-events: none;
+      opacity: 0.9;
+    }
+
+    .side-card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .side-title {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #e5e7ff;
+    }
+
+    .side-title span.icon {
+      font-size: 15px;
+    }
+
+    .side-section {
+      padding: 9px 10px;
+      border-radius: var(--radius-md);
+      background: rgba(15,23,42,0.96);
+      border: 1px solid rgba(55,65,81,0.9);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .side-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .mini-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mini-list li::before {
+      content: "•";
+      margin-inline-start: 4px;
+      color: rgba(129,140,248,0.9);
+      font-size: 13px;
+    }
+
+    .endpoint-display {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      direction: ltr;
+      unicode-bidi: plaintext;
+      padding: 6px 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(15,23,42,0.96);
+      border: 1px solid rgba(55,65,81,0.9);
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .endpoint-display code {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .endpoint-badge {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(22,163,74,0.18);
+      color: #bbf7d0;
+      font-size: 10px;
+      border: 1px solid rgba(34,197,94,0.65);
+    }
+
+    .output-area {
+      margin-top: 6px;
+      max-height: 160px;
+      overflow: auto;
+      background: rgba(15,23,42,0.96);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(55,65,81,0.9);
+      padding: 7px 9px;
+      font-size: 11px;
+      direction: ltr;
+      unicode-bidi: plaintext;
+      white-space: pre-wrap;
+      color: #e5e7eb;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.96);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(129,140,248,1);
+      box-shadow: 0 0 8px rgba(129,140,248,0.9);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="brand">
+        <div class="brand-logo"></div>
+        <div class="brand-main">
+          <div class="brand-title">
+            <span>PDF Control Center</span>
+            <span class="accent">by Mahmoud</span>
+          </div>
+          <div class="brand-sub">واجهة متقدمة للتعامل مع سيرفر PDF الخاص بك</div>
+        </div>
+      </div>
+      <div class="endpoint-pill">
+        <span class="endpoint-pill-dot"></span>
+        <span>API Online</span>
+        <small>https://pdf-server-navy.vercel.app</small>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="card-inner">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="split">
+              <span class="icon">✂️</span>
+              <span>تقسيم PDF</span>
+            </button>
+            <button class="tab-btn" data-tab="merge">
+              <span class="icon">🧩</span>
+              <span>دمج ملفات</span>
+            </button>
+            <button class="tab-btn" data-tab="compress">
+              <span class="icon">📦</span>
+              <span>ضغط ملف</span>
+            </button>
+            <button class="tab-btn" data-tab="extract-text">
+              <span class="icon">📝</span>
+              <span>استخراج نص</span>
+            </button>
+            <button class="tab-btn" data-tab="extract-pages">
+              <span class="icon">📄</span>
+              <span>استخراج صفحات</span>
+            </button>
+          </div>
+
+          <!-- Split -->
+          <div class="tab-content active" id="tab-split">
+            <div class="field-row">
+              <label>ملف PDF للتقسيم</label>
+            </div>
+            <label class="file-drop">
+              <span class="file-drop-title">
+                <span class="icon">📂</span>
+                اختر ملف PDF أو أسقطه هنا
+              </span>
+              <span class="file-drop-sub">سيتم إنشاء ملف جديد يحتوي على النطاق المحدد من الصفحات.</span>
+              <input id="splitFile" type="file" accept="application/pdf" />
+            </label>
+            <div class="file-meta" id="splitFileMeta"></div>
+
+            <div class="field-row">
+              <div class="field">
+                <label>الصفحة الأولى <span class="hint">(مثال: 1)</span></label>
+                <input id="splitStart" type="number" min="1" placeholder="1" />
+              </div>
+              <div class="field">
+                <label>الصفحة الأخيرة <span class="hint">(اختياري)</span></label>
+                <input id="splitEnd" type="number" min="1" placeholder="مثال: 5" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="primary" id="splitBtn">
+                <span>تنفيذ التقسيم</span>
+              </button>
+              <span class="helper-text">سيتم تنزيل الملف الناتج مباشرة بعد نجاح العملية.</span>
+            </div>
+
+            <div class="status-area" id="splitStatus"></div>
+          </div>
+
+          <!-- Merge -->
+          <div class="tab-content" id="tab-merge">
+            <label>ملفات PDF للدمج</label>
+            <label class="file-drop">
+              <span class="file-drop-title">
+                <span class="icon">📚</span>
+                اختر عدة ملفات PDF للدمج
+              </span>
+              <span class="file-drop-sub">سيتم دمج الملفات حسب ترتيب اختيارها.</span>
+              <input id="mergeFiles" type="file" accept="application/pdf" multiple />
+            </label>
+            <div class="file-meta" id="mergeFileMeta"></div>
+
+            <div class="actions">
+              <button class="primary" id="mergeBtn">
+                <span>دمج الملفات</span>
+              </button>
+              <span class="helper-text">النتيجة ستكون ملف PDF واحد يحتوي جميع الصفحات.</span>
+            </div>
+
+            <div class="status-area" id="mergeStatus"></div>
+          </div>
+
+          <!-- Compress -->
+          <div class="tab-content" id="tab-compress">
+            <label>ملف PDF للضغط</label>
+            <label class="file-drop">
+              <span class="file-drop-title">
+                <span class="icon">📦</span>
+                اختر ملف PDF ليتم ضغطه
+              </span>
+              <span class="file-drop-sub">الضغط هنا مبدئي (إعادة بناء الملف) لتحسين الحجم قدر الإمكان.</span>
+              <input id="compressFile" type="file" accept="application/pdf" />
+            </label>
+            <div class="file-meta" id="compressFileMeta"></div>
+
+            <div class="actions">
+              <button class="primary" id="compressBtn">
+                <span>ضغط الملف</span>
+              </button>
+              <span class="helper-text">سيتم تنزيل الملف المضغوط تلقائياً عند الانتهاء.</span>
+            </div>
+
+            <div class="status-area" id="compressStatus"></div>
+          </div>
+
+          <!-- Extract Text -->
+          <div class="tab-content" id="tab-extract-text">
+            <label>ملف PDF لاستخراج النصوص</label>
+            <label class="file-drop">
+              <span class="file-drop-title">
+                <span class="icon">📝</span>
+                اختر ملف PDF لاستخراج النصوص منه
+              </span>
+              <span class="file-drop-sub">سيتم عرض النص المستخرج في اللوحة الجانبية ويمكنك نسخه.</span>
+              <input id="extractTextFile" type="file" accept="application/pdf" />
+            </label>
+            <div class="file-meta" id="extractTextFileMeta"></div>
+
+            <div class="actions">
+              <button class="primary" id="extractTextBtn">
+                <span>استخراج النص</span>
+              </button>
+            </div>
+
+            <div class="status-area" id="extractTextStatus"></div>
+          </div>
+
+          <!-- Extract Pages -->
+          <div class="tab-content" id="tab-extract-pages">
+            <label>ملف PDF لاستخراج صفحات محددة</label>
+            <label class="file-drop">
+              <span class="file-drop-title">
+                <span class="icon">📄</span>
+                اختر ملف PDF ثم حدد الصفحات المطلوبة
+              </span>
+              <span class="file-drop-sub">يمكنك استخدام صيغة مثل: 1,3,5-7 لاختيار صفحات متعددة.</span>
+              <input id="extractPagesFile" type="file" accept="application/pdf" />
+            </label>
+            <div class="file-meta" id="extractPagesFileMeta"></div>
+
+            <div class="field">
+              <label>الصفحات المطلوبة <span class="hint">(مثال: 1,3,5-7)</span></label>
+              <input id="extractPagesInput" type="text" placeholder="1,3,5-7" />
+            </div>
+
+            <div class="actions">
+              <button class="primary" id="extractPagesBtn">
+                <span>استخراج الصفحات</span>
+              </button>
+              <span class="helper-text">سيتم إنشاء ملف جديد يحتوي الصفحات المحددة فقط.</span>
+            </div>
+
+            <div class="status-area" id="extractPagesStatus"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-card">
+        <div class="side-card-inner">
+          <div class="side-title">
+            <span class="icon">📡</span>
+            <span>حالة العمليات والنتائج</span>
+          </div>
+
+          <div class="side-section">
+            <div class="side-badges">
+              <span class="pill">
+                <span class="dot"></span>
+                <span>متصل بسيرفر PDF</span>
+              </span>
+              <span class="badge badge-accent">واجهة مستقرة</span>
+              <span class="badge badge-soft">بدون تخزين ملفات على الواجهة</span>
+            </div>
+            <ul class="mini-list">
+              <li>كل العمليات تتم عبر endpoint واحد آمن.</li>
+              <li>التحميل يتم مباشرة من استجابة السيرفر.</li>
+              <li>النصوص تُعرض محلياً فقط في هذه الصفحة.</li>
+            </ul>
+          </div>
+
+          <div class="side-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span>آخر Endpoint مستخدم</span>
+              <span class="badge">يتم تحديثه حسب العملية</span>
+            </div>
+            <div class="endpoint-display" id="endpointDisplay">
+              <code>GET /</code>
+              <span class="endpoint-badge">جاهز</span>
+            </div>
+          </div>
+
+          <div class="side-section">
+            <span>المخرجات / النص المستخرج</span>
+            <div class="output-area" id="outputArea">
+              لا يوجد مخرجات بعد. نفّذ أي عملية لعرض النتائج هنا.
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = "https://pdf-server-navy.vercel.app";
+
+    const tabs = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
+    const endpointDisplay = document.getElementById("endpointDisplay");
+    const outputArea = document.getElementById("outputArea");
+
+    function setEndpoint(method, path) {
+      endpointDisplay.innerHTML = `<code>${method} ${API_BASE}${path}</code><span class="endpoint-badge">${method}</span>`;
+    }
+
+    tabs.forEach(btn => {
+      btn.addEventListener("click", () => {
+        tabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        const tab = btn.dataset.tab;
+        tabContents.forEach(c => {
+          c.classList.toggle("active", c.id === "tab-" + tab);
+        });
+      });
+    });
+
+    function setStatus(el, type, msg) {
+      if (!el) return;
+      el.innerHTML = `
+        <div class="status-line ${type}">
+          <span class="dot"></span>
+          <span>${msg}</span>
+        </div>
+      `;
+    }
+
+    function setOutput(text) {
+      if (!text) {
+        outputArea.textContent = "لا يوجد مخرجات بعد.";
+      } else {
+        outputArea.textContent = text;
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes && bytes !== 0) return "";
+      const sizes = ["Bytes", "KB", "MB", "GB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + " " + sizes[i];
+    }
+
+    function bindSingleFileInput(inputId, metaId) {
+      const input = document.getElementById(inputId);
+      const meta = document.getElementById(metaId);
+      if (!input || !meta) return;
+
+      input.addEventListener("change", () => {
+        const file = input.files[0];
+        if (!file) {
+          meta.innerHTML = "";
+          return;
+        }
+        meta.innerHTML = `
+          <span class="badge"><strong>اسم الملف:</strong> ${file.name}</span>
+          <span class="badge"><strong>الحجم:</strong> ${formatBytes(file.size)}</span>
+          <span class="badge"><strong>النوع:</strong> ${file.type || "غير معروف"}</span>
+        `;
+      });
+    }
+
+    function bindMultiFileInput(inputId, metaId) {
+      const input = document.getElementById(inputId);
+      const meta = document.getElementById(metaId);
+      if (!input || !meta) return;
+
+      input.addEventListener("change", () => {
+        const files = Array.from(input.files || []);
+        if (!files.length) {
+          meta.innerHTML = "";
+          return;
+        }
+        const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+        meta.innerHTML = `
+          <span class="badge"><strong>عدد الملفات:</strong> ${files.length}</span>
+          <span class="badge"><strong>إجمالي الحجم:</strong> ${formatBytes(totalSize)}</span>
+        `;
+      });
+    }
+
+    bindSingleFileInput("splitFile", "splitFileMeta");
+    bindSingleFileInput("compressFile", "compressFileMeta");
+    bindSingleFileInput("extractTextFile", "extractTextFileMeta");
+    bindSingleFileInput("extractPagesFile", "extractPagesFileMeta");
+    bindMultiFileInput("mergeFiles", "mergeFileMeta");
+
+    async function downloadBlobFromResponse(response, defaultName) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = defaultName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // Split
+    document.getElementById("splitBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("splitFile");
+      const startInput = document.getElementById("splitStart");
+      const endInput = document.getElementById("splitEnd");
+      const statusEl = document.getElementById("splitStatus");
+
+      if (!fileInput.files[0]) {
+        setStatus(statusEl, "error", "من فضلك اختر ملف PDF أولاً.");
+        return;
+      }
+
+      const startPage = parseInt(startInput.value, 10);
+      const endPage = endInput.value ? parseInt(endInput.value, 10) : undefined;
+      if (!startPage || startPage < 1 || (endPage && endPage < startPage)) {
+        setStatus(statusEl, "error", "تأكد من إدخال صفحات صحيحة (الصفحة الأولى مطلوبة).");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("startPage", String(startPage));
+      if (endPage) formData.append("endPage", String(endPage));
+
+      setStatus(statusEl, "active", "جاري إرسال الطلب إلى السيرفر...");
+      setEndpoint("POST", "/split");
+
+      const btn = document.getElementById("splitBtn");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(API_BASE + "/split", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          const msg = await safeReadError(response);
+          setStatus(statusEl, "error", "فشل التنفيذ: " + msg);
+          setOutput("خطأ في /split:\n" + msg);
+        } else {
+          await downloadBlobFromResponse(response, "split.pdf");
+          setStatus(statusEl, "success", "تم التقسيم بنجاح وتم تنزيل الملف الناتج.");
+          setOutput("تم تنفيذ عملية التقسيم بنجاح.");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus(statusEl, "error", "حدث خطأ في الاتصال بالسيرفر.");
+        setOutput("Network error in /split:\n" + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Merge
+    document.getElementById("mergeBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("mergeFiles");
+      const statusEl = document.getElementById("mergeStatus");
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) {
+        setStatus(statusEl, "error", "اختر ملفين PDF على الأقل للدمج.");
+        return;
+      }
+
+      const formData = new FormData();
+      files.forEach((f, idx) => {
+        formData.append("files", f);
+      });
+
+      setStatus(statusEl, "active", "جاري دمج الملفات...");
+      setEndpoint("POST", "/merge");
+
+      const btn = document.getElementById("mergeBtn");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(API_BASE + "/merge", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          const msg = await safeReadError(response);
+          setStatus(statusEl, "error", "فشل الدمج: " + msg);
+          setOutput("خطأ في /merge:\n" + msg);
+        } else {
+          await downloadBlobFromResponse(response, "merged.pdf");
+          setStatus(statusEl, "success", "تم الدمج بنجاح وتم تنزيل الملف الناتج.");
+          setOutput("تم تنفيذ عملية الدمج بنجاح.");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus(statusEl, "error", "حدث خطأ في الاتصال بالسيرفر.");
+        setOutput("Network error in /merge:\n" + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Compress
+    document.getElementById("compressBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("compressFile");
+      const statusEl = document.getElementById("compressStatus");
+      if (!fileInput.files[0]) {
+        setStatus(statusEl, "error", "من فضلك اختر ملف PDF أولاً.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      setStatus(statusEl, "active", "جاري ضغط الملف...");
+      setEndpoint("POST", "/compress");
+
+      const btn = document.getElementById("compressBtn");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(API_BASE + "/compress", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          const msg = await safeReadError(response);
+          setStatus(statusEl, "error", "فشل الضغط: " + msg);
+          setOutput("خطأ في /compress:\n" + msg);
+        } else {
+          await downloadBlobFromResponse(response, "compressed.pdf");
+          setStatus(statusEl, "success", "تم ضغط الملف بنجاح وتم تنزيله.");
+          setOutput("تم تنفيذ عملية الضغط بنجاح.");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus(statusEl, "error", "حدث خطأ في الاتصال بالسيرفر.");
+        setOutput("Network error in /compress:\n" + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Extract Text
+    document.getElementById("extractTextBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("extractTextFile");
+      const statusEl = document.getElementById("extractTextStatus");
+      if (!fileInput.files[0]) {
+        setStatus(statusEl, "error", "من فضلك اختر ملف PDF أولاً.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      setStatus(statusEl, "active", "جاري استخراج النص من الملف...");
+      setEndpoint("POST", "/extract-text");
+
+      const btn = document.getElementById("extractTextBtn");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(API_BASE + "/extract-text", {
+          method: "POST",
+          body: formData
+        });
+
+        const json = await response.json().catch(() => null);
+
+        if (!response.ok || !json) {
+          const msg = json && json.error ? json.error : "استجابة غير صالحة من السيرفر.";
+          setStatus(statusEl, "error", "فشل استخراج النص: " + msg);
+          setOutput("خطأ في /extract-text:\n" + msg);
+        } else {
+          setStatus(statusEl, "success", "تم استخراج النص بنجاح. تم عرضه في لوحة المخرجات.");
+          setOutput(json.text || "لا يوجد نص مستخرج.");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus(statusEl, "error", "حدث خطأ في الاتصال بالسيرفر.");
+        setOutput("Network error in /extract-text:\n" + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Extract Pages
+    document.getElementById("extractPagesBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("extractPagesFile");
+      const pagesInput = document.getElementById("extractPagesInput");
+      const statusEl = document.getElementById("extractPagesStatus");
+
+      if (!fileInput.files[0]) {
+        setStatus(statusEl, "error", "من فضلك اختر ملف PDF أولاً.");
+        return;
+      }
+      const pages = (pagesInput.value || "").trim();
+      if (!pages) {
+        setStatus(statusEl, "error", "من فضلك أدخل صيغة الصفحات المطلوبة (مثال: 1,3,5-7).");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      formData.append("pages", pages);
+
+      setStatus(statusEl, "active", "جاري استخراج الصفحات المحددة...");
+      setEndpoint("POST", "/extract-pages");
+
+      const btn = document.getElementById("extractPagesBtn");
+      btn.disabled = true;
+
+      try {
+        const response = await fetch(API_BASE + "/extract-pages", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          const msg = await safeReadError(response);
+          setStatus(statusEl, "error", "فشل استخراج الصفحات: " + msg);
+          setOutput("خطأ في /extract-pages:\n" + msg);
+        } else {
+          await downloadBlobFromResponse(response, "extracted-pages.pdf");
+          setStatus(statusEl, "success", "تم استخراج الصفحات بنجاح وتم تنزيل الملف.");
+          setOutput("تم تنفيذ عملية استخراج الصفحات بنجاح.");
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus(statusEl, "error", "حدث خطأ في الاتصال بالسيرفر.");
+        setOutput("Network error in /extract-pages:\n" + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    async function safeReadError(response) {
+      try {
+        const text = await response.text();
+        try {
+          const json = JSON.parse(text);
+          return json.error || text;
+        } catch {
+          return text || response.status + " " + response.statusText;
+        }
+      } catch {
+        return response.status + " " + response.statusText;
+      }
+    }
+  </script>
+</body>
+</html>
