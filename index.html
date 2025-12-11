@@ -1,290 +1,1103 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PDF Compressor PRO</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Master Tool | أدوات بي دي اف الشاملة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-sidebar: #1e293b;
+            --bg-card: #334155;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --radius: 0.5rem;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --font-ar: 'Cairo', sans-serif;
+            --font-en: 'Inter', sans-serif;
+        }
 
-<style>
-    body {
-        font-family: "Cairo", sans-serif;
-        background: #0d0d0d;
-        color: #fff;
-        margin: 0;
-        padding: 0;
-    }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .header {
-        text-align: center;
-        padding: 25px 10px;
-        background: #111;
-        border-bottom: 1px solid #222;
-    }
+        body {
+            font-family: var(--font-ar);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    .header h1 {
-        margin: 0;
-        font-size: 28px;
-        color: #00eaff;
-    }
+        body[dir="ltr"] { font-family: var(--font-en); }
 
-    .container {
-        width: 95%;
-        max-width: 600px;
-        margin: 25px auto;
-        background: #1a1a1a;
-        padding: 25px;
-        border-radius: 16px;
-        box-shadow: 0 0 25px rgba(0,0,0,0.4);
-    }
+        /* --- Header --- */
+        header {
+            height: 60px;
+            background-color: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            flex-shrink: 0;
+            z-index: 10;
+        }
 
-    .drop-zone {
-        border: 2px dashed #555;
-        padding: 40px;
-        border-radius: 12px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.3s;
-    }
+        .brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    .drop-zone:hover {
-        border-color: #00eaff;
-        background: #111;
-    }
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
 
-    .drop-zone.dragover {
-        border-color: #00eaff;
-        background: #0b2a2e;
-    }
+        .status-indicator {
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+        .dot.online { background: var(--success); box-shadow: 0 0 5px var(--success); }
+        .dot.offline { background: var(--danger); }
 
-    .file-list {
-        margin-top: 20px;
-    }
+        button.btn-sm {
+            padding: 4px 12px;
+            font-size: 0.85rem;
+        }
 
-    .file-item {
-        background: #111;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+        /* --- Main Layout --- */
+        .layout-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
 
-    .file-name {
-        font-size: 16px;
-    }
+        /* --- Sidebar --- */
+        aside {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-inline-end: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
 
-    .progress {
-        width: 100%;
-        height: 8px;
-        background: #333;
-        border-radius: 5px;
-        overflow: hidden;
-        margin-top: 10px;
-    }
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+            border-inline-start: 3px solid transparent;
+            font-size: 0.95rem;
+        }
 
-    .progress-bar {
-        height: 100%;
-        width: 0%;
-        background: #00eaff;
-        transition: width 0.3s;
-    }
+        .nav-item:hover {
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-main);
+        }
 
-    .btn {
-        margin-top: 20px;
-        padding: 14px;
-        background: #00eaff;
-        color: #000;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 18px;
-        font-weight: bold;
-        width: 100%;
-        transition: 0.3s;
-    }
+        .nav-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            border-inline-start-color: var(--primary);
+            font-weight: 600;
+        }
 
-    .btn:hover {
-        background: #00c4d4;
-    }
+        /* --- Content Area --- */
+        main {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background-color: var(--bg-dark);
+            position: relative;
+        }
 
-    .history {
-        margin-top: 30px;
-        padding: 15px;
-        background: #111;
-        border-radius: 12px;
-    }
+        /* --- UI Components --- */
+        .panel { display: none; max-width: 900px; margin: 0 auto; animation: fadeIn 0.3s ease; }
+        .panel.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-    .history h3 {
-        margin: 0 0 10px 0;
-        color: #00eaff;
-    }
+        h2 { margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
 
-    .history-item {
-        padding: 10px;
-        background: #1f1f1f;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        font-size: 14px;
-    }
-</style>
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem; }
+        
+        input[type="text"], input[type="password"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: var(--radius);
+            font-family: inherit;
+        }
+
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn:disabled { background-color: var(--text-muted); cursor: not-allowed; opacity: 0.7; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        .btn-outline:hover { border-color: var(--text-main); color: var(--text-main); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        /* File Upload Zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            background-color: rgba(255,255,255,0.02);
+            cursor: pointer;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background-color: rgba(59, 130, 246, 0.05); }
+        .drop-zone input[type="file"] { position: absolute; top:0; left:0; width:100%; height:100%; opacity: 0; cursor: pointer; }
+
+        /* Tables & Lists */
+        .file-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .file-item {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 10px; text-align: start; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 600; }
+        
+        /* Logs */
+        .log-console {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            padding: 1rem;
+            border-radius: var(--radius);
+            height: 200px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+        }
+
+        /* Specific Utilities */
+        .hidden { display: none !important; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .scroll-box { max-height: 200px; overflow-y: auto; background: var(--bg-dark); padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .layout-container { flex-direction: column; }
+            aside { width: 100%; height: auto; max-height: 200px; }
+            header { padding: 0 1rem; }
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="header">
-    <h1>PDF Compressor PRO</h1>
-</div>
+    <header>
+        <div class="brand">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <span data-i18n="app_title">PDF Master Tool</span>
+        </div>
+        <div class="header-controls">
+            <div class="status-indicator">
+                <div id="status-dot" class="dot"></div>
+                <span id="status-text" data-i18n="status_checking">...</span>
+            </div>
+            <button id="lang-toggle" class="btn btn-sm btn-outline">English</button>
+        </div>
+    </header>
 
-<div class="container">
+    <div class="layout-container">
+        <aside id="sidebar">
+            <div class="nav-item active" data-target="panel-compress" data-i18n="nav_compress">ضغط الملفات</div>
+            <div class="nav-item" data-target="panel-merge" data-i18n="nav_merge">دمج الملفات</div>
+            <div class="nav-item" data-target="panel-split" data-i18n="nav_split">تقسيم / استخراج</div>
+            <div class="nav-item" data-target="panel-text" data-i18n="nav_text">استخراج النص</div>
+            <div class="nav-item" data-target="panel-info" data-i18n="nav_info">معلومات الملف</div>
+            <div class="nav-item" data-target="panel-protect" data-i18n="nav_protect">حماية / فك الحماية</div>
+            <div class="nav-item" data-target="panel-watermark" data-i18n="nav_watermark">العلامة المائية</div>
+            <div class="nav-item" data-target="panel-rotate" data-i18n="nav_rotate">تدوير / إعادة ترتيب</div>
+            <div class="nav-item" data-target="panel-metadata" data-i18n="nav_metadata">تعديل البيانات (Metadata)</div>
+            <div class="nav-item" data-target="panel-supabase" data-i18n="nav_supabase">إدارة الملفات (Supabase)</div>
+            <div class="nav-item" data-target="panel-history" data-i18n="nav_history">السجل والحالة</div>
+        </aside>
 
-    <div class="drop-zone" id="dropZone">
-        اسحب ملفات PDF هنا أو اضغط للاختيار
-        <input type="file" id="fileInput" accept="application/pdf" multiple hidden />
-    </div>
-
-    <div class="file-list" id="fileList"></div>
-
-    <button class="btn" id="startBtn" disabled>بدء الضغط</button>
-
-    <div class="history" id="historyBox">
-        <h3>الملفات المضغوطة</h3>
-        <div id="historyList"></div>
-    </div>
-
-</div>
-
-<script type="module">
-    // ✅ بيانات Supabase الخاصة بك
-    const SUPABASE_URL = "https://tdqewqarcvdunwuxgios.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkcWV3cWFyY3ZkdW53dXhnaW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0ODc4NDcsImV4cCI6MjA4MTA2Mzg0N30.RSMghTLwda7kLidTohBFLqE7qCQoHs3S6l88ewUidRw";
-    const BUCKET_NAME = "pdf-files";
-
-    // ✅ رابط السيرفر الخاص بك
-    const SERVER_URL = "https://pdf-server-navy.vercel.app/compress";
-
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    const dropZone = document.getElementById("dropZone");
-    const fileInput = document.getElementById("fileInput");
-    const fileList = document.getElementById("fileList");
-    const startBtn = document.getElementById("startBtn");
-    const historyList = document.getElementById("historyList");
-
-    let files = [];
-
-    // ✅ Drag & Drop
-    dropZone.onclick = () => fileInput.click();
-
-    dropZone.ondragover = (e) => {
-        e.preventDefault();
-        dropZone.classList.add("dragover");
-    };
-
-    dropZone.ondragleave = () => dropZone.classList.remove("dragover");
-
-    dropZone.ondrop = (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("dragover");
-        handleFiles(e.dataTransfer.files);
-    };
-
-    fileInput.onchange = () => handleFiles(fileInput.files);
-
-    function handleFiles(selected) {
-        for (let file of selected) {
-            if (file.type !== "application/pdf") continue;
-            files.push({ file, progress: 0 });
-        }
-        renderFiles();
-    }
-
-    function renderFiles() {
-        fileList.innerHTML = "";
-        files.forEach((item, index) => {
-            const div = document.createElement("div");
-            div.className = "file-item";
-
-            div.innerHTML = `
-                <div>
-                    <div class="file-name">${item.file.name}</div>
-                    <div class="progress"><div class="progress-bar" id="pb-${index}"></div></div>
+        <main>
+            <div id="panel-compress" class="panel active">
+                <h2 data-i18n="nav_compress">Compress PDF</h2>
+                <div class="card">
+                    <div class="drop-zone" id="compress-drop">
+                        <p data-i18n="drag_drop">Drag & Drop PDF here or Click to Upload</p>
+                        <input type="file" accept="application/pdf" id="compress-file-input">
+                    </div>
+                    <div id="compress-status" class="file-list"></div>
                 </div>
+                <div class="card">
+                    <label data-i18n="compress_url_label">Or Compress from URL:</label>
+                    <div class="flex-row">
+                        <input type="text" id="compress-url-input" placeholder="https://example.com/file.pdf">
+                        <button class="btn" id="compress-url-btn" data-i18n="btn_compress">Compress</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-merge" class="panel">
+                <h2 data-i18n="nav_merge">Merge PDFs</h2>
+                <div class="card">
+                    <p data-i18n="merge_instr">Select multiple files. Drag items in list to reorder (simulated with buttons).</p>
+                    <div class="drop-zone" style="margin-bottom: 1rem;">
+                        <span data-i18n="add_files">Add Files</span>
+                        <input type="file" accept="application/pdf" multiple id="merge-file-input">
+                    </div>
+                    <button class="btn btn-outline btn-sm" id="merge-select-supabase" data-i18n="select_supabase">Select from Cloud</button>
+                    
+                    <div id="merge-list" class="file-list"></div>
+                    <br>
+                    <button class="btn" id="merge-btn" data-i18n="btn_merge" disabled>Merge Files</button>
+                </div>
+            </div>
+
+            <div id="panel-split" class="panel">
+                <h2 data-i18n="nav_split">Extract Pages</h2>
+                <div class="card">
+                    <label data-i18n="select_file">Select File</label>
+                    <input type="file" accept="application/pdf" id="split-file-input">
+                    <br><br>
+                    <label data-i18n="pages_placeholder">Pages (e.g., 1-3,5,7-8)</label>
+                    <input type="text" id="split-pages-input" placeholder="1-3,5">
+                    <br><br>
+                    <button class="btn" id="split-btn" data-i18n="btn_extract_pages">Extract Pages</button>
+                </div>
+            </div>
+
+            <div id="panel-text" class="panel">
+                <h2 data-i18n="nav_text">Extract Text</h2>
+                <div class="card">
+                    <input type="file" accept="application/pdf" id="text-file-input">
+                    <br><br>
+                    <button class="btn" id="text-btn" data-i18n="btn_extract_text">Get Text</button>
+                </div>
+                <div class="card hidden" id="text-result-card">
+                    <div class="flex-row" style="justify-content: space-between;">
+                        <span id="text-info-display"></span>
+                        <button class="btn btn-sm btn-outline" id="text-copy-btn" data-i18n="btn_copy">Copy</button>
+                    </div>
+                    <textarea id="text-output" rows="10" readonly></textarea>
+                    <br>
+                    <button class="btn btn-sm" id="text-download-btn" data-i18n="btn_download_txt">Download .txt</button>
+                </div>
+            </div>
+
+            <div id="panel-info" class="panel">
+                <h2 data-i18n="nav_info">PDF Information</h2>
+                <div class="card">
+                    <input type="file" accept="application/pdf" id="info-file-input">
+                    <br><br>
+                    <button class="btn" id="info-btn" data-i18n="btn_get_info">Get Info</button>
+                </div>
+                <div class="card hidden" id="info-result-card">
+                    <div id="info-display"></div>
+                </div>
+            </div>
+
+            <div id="panel-protect" class="panel">
+                <h2 data-i18n="nav_protect">Protect / Unlock</h2>
+                <div class="card">
+                    <h3 data-i18n="title_protect">Protect PDF</h3>
+                    <input type="file" accept="application/pdf" id="protect-file-input">
+                    <br><br>
+                    <input type="password" id="protect-pass" placeholder="Password">
+                    <br><br>
+                    <button class="btn" id="protect-btn" data-i18n="btn_protect">Add Password</button>
+                </div>
+                <div class="card">
+                    <h3 data-i18n="title_unlock">Unlock PDF</h3>
+                    <input type="file" accept="application/pdf" id="unlock-file-input">
+                    <br><br>
+                    <button class="btn" id="unlock-btn" data-i18n="btn_unlock">Remove Password</button>
+                </div>
+            </div>
+
+            <div id="panel-watermark" class="panel">
+                <h2 data-i18n="nav_watermark">Watermark</h2>
+                <div class="card">
+                    <input type="file" accept="application/pdf" id="wm-file-input">
+                    <br><br>
+                    <label data-i18n="wm_text">Watermark Text</label>
+                    <input type="text" id="wm-text" value="CONFIDENTIAL">
+                    <br><br>
+                    <div class="flex-row">
+                        <div style="flex:1">
+                            <label data-i18n="wm_color">Color</label>
+                            <select id="wm-color">
+                                <option value="red">Red</option>
+                                <option value="blue">Blue</option>
+                                <option value="green">Green</option>
+                                <option value="black">Black</option>
+                                <option value="white">White</option>
+                            </select>
+                        </div>
+                        <div style="flex:1">
+                            <label data-i18n="wm_opacity">Opacity (0.1 - 1.0)</label>
+                            <input type="number" id="wm-opacity" step="0.1" min="0.1" max="1.0" value="0.5">
+                        </div>
+                    </div>
+                    <br>
+                    <button class="btn" id="wm-btn" data-i18n="btn_apply_wm">Apply Watermark</button>
+                </div>
+            </div>
+
+            <div id="panel-rotate" class="panel">
+                <h2 data-i18n="nav_rotate">Rotate / Reorder</h2>
+                <div class="card">
+                    <h3 data-i18n="title_rotate">Rotate Pages</h3>
+                    <input type="file" accept="application/pdf" id="rotate-file-input">
+                    <br><br>
+                    <div class="flex-row">
+                        <select id="rotate-angle">
+                            <option value="90">90° CW</option>
+                            <option value="180">180°</option>
+                            <option value="270">270° CW</option>
+                        </select>
+                        <input type="text" id="rotate-pages" placeholder="Pages (optional, e.g. 1,3)">
+                    </div>
+                    <br>
+                    <button class="btn" id="rotate-btn" data-i18n="btn_rotate">Rotate</button>
+                </div>
+                <div class="card">
+                    <h3 data-i18n="title_reorder">Reorder Pages</h3>
+                    <input type="file" accept="application/pdf" id="reorder-file-input">
+                    <br><br>
+                    <label data-i18n="reorder_instr">New Order (comma separated page numbers)</label>
+                    <input type="text" id="reorder-order" placeholder="3, 1, 2">
+                    <br><br>
+                    <button class="btn" id="reorder-btn" data-i18n="btn_reorder">Reorder</button>
+                </div>
+            </div>
+
+            <div id="panel-metadata" class="panel">
+                <h2 data-i18n="nav_metadata">Edit Metadata</h2>
+                <div class="card">
+                    <input type="file" accept="application/pdf" id="meta-file-input">
+                    <br><br>
+                    <input type="text" id="meta-title" placeholder="Title">
+                    <br><br>
+                    <input type="text" id="meta-author" placeholder="Author">
+                    <br><br>
+                    <input type="text" id="meta-subject" placeholder="Subject">
+                    <br><br>
+                    <input type="text" id="meta-keywords" placeholder="Keywords (comma separated)">
+                    <br><br>
+                    <button class="btn" id="meta-btn" data-i18n="btn_save_meta">Save Metadata</button>
+                </div>
+            </div>
+
+            <div id="panel-supabase" class="panel">
+                <h2 data-i18n="nav_supabase">Cloud Files (Supabase)</h2>
+                <div class="card">
+                    <div class="flex-row" style="justify-content: space-between; margin-bottom: 1rem;">
+                        <button class="btn btn-sm btn-outline" id="supabase-refresh-btn" data-i18n="btn_refresh">Refresh</button>
+                        <label class="btn btn-sm">
+                            <span data-i18n="btn_upload">Upload</span>
+                            <input type="file" id="supabase-upload-input" hidden>
+                        </label>
+                    </div>
+                    <div class="table-container">
+                        <table id="supabase-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="col_name">Name</th>
+                                    <th data-i18n="col_actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panel-history" class="panel">
+                <h2 data-i18n="nav_history">History & Status</h2>
+                <div class="card">
+                    <h3 data-i18n="title_history">Operation History</h3>
+                    <button class="btn btn-sm btn-outline" onclick="clearHistory()" data-i18n="btn_clear">Clear</button>
+                    <div class="table-container" style="margin-top:10px;">
+                        <table id="history-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="col_time">Time</th>
+                                    <th data-i18n="col_type">Type</th>
+                                    <th data-i18n="col_status">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 data-i18n="title_logs">System Logs</h3>
+                    <div id="system-logs" class="log-console"></div>
+                    <br>
+                    <button class="btn btn-sm btn-outline" onclick="document.getElementById('system-logs').innerHTML=''" data-i18n="btn_clear">Clear Logs</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:100; align-items:center; justify-content:center;">
+        <div style="background:var(--bg-card); padding:2rem; border-radius:var(--radius); width:90%; max-width:500px; max-height:80vh; overflow-y:auto; position:relative;">
+            <button onclick="document.getElementById('modal-overlay').style.display='none'" style="position:absolute; top:10px; right:10px; background:transparent; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+            <h3 data-i18n="select_supabase">Select Files</h3>
+            <div id="modal-file-list" class="file-list" style="margin-top:1rem;"></div>
+            <br>
+            <button class="btn" id="modal-confirm-btn" data-i18n="btn_confirm">Add Selected</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+        // --- Configuration ---
+        const SUPABASE_URL = "https://tdqewqarcvdunwuxgios.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkcWV3cWFyY3ZkdW53dXhnaW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0ODc4NDcsImV4cCI6MjA4MTA2Mzg0N30.RSMghTLwda7kLidTohBFLqE7qCQoHs3S6l88ewUidRw";
+        const BUCKET_NAME = "pdf-files";
+        const SERVER_BASE = "https://pdf-server-navy.vercel.app";
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // --- State ---
+        let currentLang = 'ar';
+        let mergeFiles = []; // Array of { type: 'local'|'cloud', file: File|null, url: string, name: string }
+
+        // --- I18n Data ---
+        const i18n = {
+            ar: {
+                app_title: "أدوات PDF الشاملة",
+                status_checking: "جاري التحقق...",
+                status_online: "متصل",
+                status_offline: "غير متصل",
+                nav_compress: "ضغط الملفات",
+                nav_merge: "دمج الملفات",
+                nav_split: "تقسيم / استخراج",
+                nav_text: "استخراج النص",
+                nav_info: "معلومات الملف",
+                nav_protect: "حماية / فك الحماية",
+                nav_watermark: "العلامة المائية",
+                nav_rotate: "تدوير / إعادة ترتيب",
+                nav_metadata: "تعديل البيانات",
+                nav_supabase: "إدارة الملفات (Supabase)",
+                nav_history: "السجل والحالة",
+                drag_drop: "اسحب ملف PDF هنا أو اضغط للاختيار",
+                compress_url_label: "أو ضغط عبر رابط مباشر:",
+                btn_compress: "ضغط الملف",
+                merge_instr: "اختر عدة ملفات. يمكنك إعادة الترتيب.",
+                add_files: "إضافة ملفات",
+                select_supabase: "اختيار من السحابة",
+                btn_merge: "دمج الملفات",
+                select_file: "اختر الملف",
+                pages_placeholder: "أرقام الصفحات (مثال: 1-3,5)",
+                btn_extract_pages: "استخراج الصفحات",
+                btn_extract_text: "جلب النص",
+                btn_copy: "نسخ",
+                btn_download_txt: "تحميل كملف نصي",
+                btn_get_info: "جلب المعلومات",
+                title_protect: "حماية بكلمة مرور",
+                title_unlock: "إزالة الحماية",
+                btn_protect: "تشفير الملف",
+                btn_unlock: "فك التشفير",
+                wm_text: "نص العلامة المائية",
+                wm_color: "اللون",
+                wm_opacity: "الشفافية",
+                btn_apply_wm: "إضافة العلامة",
+                title_rotate: "تدوير الصفحات",
+                title_reorder: "إعادة ترتيب الصفحات",
+                btn_rotate: "تدوير",
+                reorder_instr: "الترتيب الجديد (أرقام مفصولة بفواصل)",
+                btn_reorder: "إعادة ترتيب",
+                btn_save_meta: "حفظ البيانات",
+                btn_refresh: "تحديث",
+                btn_upload: "رفع ملف",
+                col_name: "الاسم",
+                col_actions: "إجراءات",
+                title_history: "سجل العمليات",
+                btn_clear: "مسح",
+                col_time: "الوقت",
+                col_type: "النوع",
+                col_status: "الحالة",
+                title_logs: "سجلات النظام",
+                btn_confirm: "إضافة المحدد",
+                msg_processing: "جاري المعالجة...",
+                msg_uploading: "جاري الرفع...",
+                msg_success: "تمت العملية بنجاح!",
+                msg_error: "حدث خطأ.",
+                msg_select_files: "الرجاء اختيار ملفات أولاً."
+            },
+            en: {
+                app_title: "PDF Master Tool",
+                status_checking: "Checking...",
+                status_online: "Online",
+                status_offline: "Offline",
+                nav_compress: "Compress",
+                nav_merge: "Merge",
+                nav_split: "Split / Extract",
+                nav_text: "Extract Text",
+                nav_info: "PDF Info",
+                nav_protect: "Protect / Unlock",
+                nav_watermark: "Watermark",
+                nav_rotate: "Rotate / Reorder",
+                nav_metadata: "Edit Metadata",
+                nav_supabase: "Supabase Files",
+                nav_history: "History & Status",
+                drag_drop: "Drag & Drop PDF here or Click to Upload",
+                compress_url_label: "Or Compress from URL:",
+                btn_compress: "Compress",
+                merge_instr: "Select files. Reorder if needed.",
+                add_files: "Add Files",
+                select_supabase: "Select from Cloud",
+                btn_merge: "Merge Files",
+                select_file: "Select File",
+                pages_placeholder: "Pages (e.g., 1-3,5)",
+                btn_extract_pages: "Extract Pages",
+                btn_extract_text: "Get Text",
+                btn_copy: "Copy",
+                btn_download_txt: "Download .txt",
+                btn_get_info: "Get Info",
+                title_protect: "Protect PDF",
+                title_unlock: "Unlock PDF",
+                btn_protect: "Protect",
+                btn_unlock: "Unlock",
+                wm_text: "Watermark Text",
+                wm_color: "Color",
+                wm_opacity: "Opacity",
+                btn_apply_wm: "Apply Watermark",
+                title_rotate: "Rotate Pages",
+                title_reorder: "Reorder Pages",
+                btn_rotate: "Rotate",
+                reorder_instr: "New Order (comma separated)",
+                btn_reorder: "Reorder",
+                btn_save_meta: "Save Metadata",
+                btn_refresh: "Refresh",
+                btn_upload: "Upload",
+                col_name: "Name",
+                col_actions: "Actions",
+                title_history: "History",
+                btn_clear: "Clear",
+                col_time: "Time",
+                col_type: "Type",
+                col_status: "Status",
+                title_logs: "System Logs",
+                btn_confirm: "Add Selected",
+                msg_processing: "Processing...",
+                msg_uploading: "Uploading...",
+                msg_success: "Success!",
+                msg_error: "Error occurred.",
+                msg_select_files: "Please select files first."
+            }
+        };
+
+        // --- Helper Functions ---
+
+        function t(key) {
+            return i18n[currentLang][key] || key;
+        }
+
+        function updateUI() {
+            document.body.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    el.textContent = i18n[currentLang][key];
+                }
+            });
+            document.getElementById('lang-toggle').textContent = currentLang === 'ar' ? 'English' : 'العربية';
+        }
+
+        function log(message, type = 'info') {
+            const consoleEl = document.getElementById('system-logs');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : (type === 'success' ? '#0f0' : '#aaa');
+            consoleEl.innerHTML += `<div style="color:${color}">[${time}] ${message}</div>`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function addHistory(type, status) {
+            const table = document.querySelector('#history-table tbody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date().toLocaleTimeString()}</td>
+                <td>${type}</td>
+                <td><span style="color:${status === 'Success' ? 'var(--success)' : 'var(--danger)'}">${status}</span></td>
             `;
+            table.prepend(row);
+        }
 
-            fileList.appendChild(div);
+        // --- API Helpers ---
+
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${SERVER_BASE}/health`);
+                const data = await res.json();
+                const dot = document.getElementById('status-dot');
+                const text = document.getElementById('status-text');
+                if (data.ok) {
+                    dot.className = 'dot online';
+                    text.textContent = t('status_online');
+                } else {
+                    throw new Error('Not ok');
+                }
+            } catch (e) {
+                document.getElementById('status-dot').className = 'dot offline';
+                document.getElementById('status-text').textContent = t('status_offline');
+            }
+        }
+
+        async function uploadFileToSupabase(file) {
+            const timestamp = Date.now();
+            const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+            
+            log(`Starting upload: ${file.name}`, 'info');
+            const { data, error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
+            
+            if (error) {
+                log(`Upload failed: ${error.message}`, 'error');
+                throw error;
+            }
+
+            const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+            log(`Upload success: ${fileName}`, 'success');
+            return urlData.publicUrl;
+        }
+
+        async function callBackendPdf(route, body, downloadName) {
+            log(`Calling ${route}...`, 'info');
+            try {
+                const res = await fetch(`${SERVER_BASE}${route}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = downloadName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                
+                log(`Operation ${route} successful`, 'success');
+                addHistory(route.replace('/', ''), 'Success');
+                return true;
+            } catch (e) {
+                log(`Error in ${route}: ${e.message}`, 'error');
+                addHistory(route.replace('/', ''), 'Failed');
+                alert(t('msg_error') + " " + e.message);
+                return false;
+            }
+        }
+
+        async function callBackendJson(route, body) {
+            log(`Calling ${route}...`, 'info');
+            try {
+                const res = await fetch(`${SERVER_BASE}${route}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const json = await res.json();
+                addHistory(route.replace('/', ''), json.ok ? 'Success' : 'Failed');
+                return json;
+            } catch (e) {
+                log(`Error ${route}: ${e.message}`, 'error');
+                return { ok: false, error: e.message };
+            }
+        }
+
+        // --- Core Logic for Panels ---
+
+        // 1. Compress
+        document.getElementById('compress-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const statusDiv = document.getElementById('compress-status');
+            statusDiv.innerHTML = `<div class="file-item">${file.name} - ${t('msg_uploading')}</div>`;
+            
+            try {
+                const publicUrl = await uploadFileToSupabase(file);
+                statusDiv.innerHTML = `<div class="file-item">${file.name} - ${t('msg_processing')}</div>`;
+                await callBackendPdf('/compress', { publicUrl }, `compressed_${file.name}`);
+                statusDiv.innerHTML = `<div class="file-item" style="color:var(--success)">${file.name} - ${t('msg_success')}</div>`;
+            } catch (err) {
+                statusDiv.innerHTML = `<div class="file-item" style="color:var(--danger)">${err.message}</div>`;
+            }
+            e.target.value = '';
         });
 
-        startBtn.disabled = files.length === 0;
-    }
-
-    startBtn.onclick = async () => {
-        for (let i = 0; i < files.length; i++) {
-            await processFile(files[i], i);
-        }
-    };
-
-    async function processFile(item, index) {
-        const progressBar = document.getElementById(`pb-${index}`);
-
-        // ✅ 1) رفع الملف إلى Supabase
-        progressBar.style.width = "20%";
-
-        const fileName = `${Date.now()}-${item.file.name}`;
-        const { data, error } = await supabase.storage
-            .from(BUCKET_NAME)
-            .upload(fileName, item.file);
-
-        if (error) {
-            progressBar.style.background = "red";
-            return;
-        }
-
-        progressBar.style.width = "40%";
-
-        // ✅ 2) جلب الرابط العام
-        const { data: publicData } = supabase.storage
-            .from(BUCKET_NAME)
-            .getPublicUrl(fileName);
-
-        const publicUrl = publicData.publicUrl;
-
-        progressBar.style.width = "60%";
-
-        // ✅ 3) إرسال الرابط للسيرفر للضغط
-        const response = await fetch(SERVER_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ publicUrl })
+        document.getElementById('compress-url-btn').addEventListener('click', async () => {
+            const url = document.getElementById('compress-url-input').value;
+            if(!url) return;
+            await callBackendPdf('/compress', { publicUrl: url }, 'compressed_from_url.pdf');
         });
 
-        if (!response.ok) {
-            progressBar.style.background = "red";
-            return;
+        // 2. Merge
+        function renderMergeList() {
+            const container = document.getElementById('merge-list');
+            container.innerHTML = '';
+            mergeFiles.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'file-item';
+                div.innerHTML = `
+                    <span>${index + 1}. ${item.name}</span>
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn-sm btn-outline" onclick="window.moveMergeItem(${index}, -1)">▲</button>
+                        <button class="btn-sm btn-outline" onclick="window.moveMergeItem(${index}, 1)">▼</button>
+                        <button class="btn-sm btn-danger" onclick="window.removeMergeItem(${index})">&times;</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            document.getElementById('merge-btn').disabled = mergeFiles.length < 2;
         }
 
-        progressBar.style.width = "80%";
+        window.moveMergeItem = (index, dir) => {
+            if (index + dir < 0 || index + dir >= mergeFiles.length) return;
+            const temp = mergeFiles[index];
+            mergeFiles[index] = mergeFiles[index + dir];
+            mergeFiles[index + dir] = temp;
+            renderMergeList();
+        };
 
-        // ✅ 4) تحميل الملف المضغوط
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+        window.removeMergeItem = (index) => {
+            mergeFiles.splice(index, 1);
+            renderMergeList();
+        };
 
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `compressed-${item.file.name}`;
-        a.click();
+        document.getElementById('merge-file-input').addEventListener('change', (e) => {
+            for (const file of e.target.files) {
+                mergeFiles.push({ type: 'local', file: file, name: file.name, url: null });
+            }
+            renderMergeList();
+            e.target.value = '';
+        });
 
-        progressBar.style.width = "100%";
+        document.getElementById('merge-btn').addEventListener('click', async () => {
+            if (mergeFiles.length < 2) return;
+            const btn = document.getElementById('merge-btn');
+            btn.textContent = t('msg_processing');
+            btn.disabled = true;
 
-        // ✅ 5) إضافة للـ History
-        const h = document.createElement("div");
-        h.className = "history-item";
-        h.innerHTML = `✅ ${item.file.name} — تم ضغطه`;
-        historyList.prepend(h);
-    }
-</script>
+            try {
+                const publicUrls = [];
+                for (const item of mergeFiles) {
+                    if (item.type === 'local' && !item.url) {
+                        item.url = await uploadFileToSupabase(item.file);
+                    }
+                    publicUrls.push(item.url);
+                }
+                await callBackendPdf('/merge', { publicUrls }, 'merged.pdf');
+            } catch (e) {
+                console.error(e);
+            } finally {
+                btn.textContent = t('btn_merge');
+                btn.disabled = false;
+            }
+        });
 
+        // Merge: Supabase Selection
+        document.getElementById('merge-select-supabase').addEventListener('click', async () => {
+            document.getElementById('modal-overlay').style.display = 'flex';
+            const { data, error } = await supabase.storage.from(BUCKET_NAME).list();
+            const list = document.getElementById('modal-file-list');
+            list.innerHTML = '';
+            if (data) {
+                data.forEach(file => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.innerHTML = `
+                        <label style="display:flex; align-items:center; width:100%; cursor:pointer;">
+                            <input type="checkbox" value="${file.name}" style="width:auto; margin-inline-end:10px;">
+                            ${file.name}
+                        </label>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+        });
+
+        document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('#modal-file-list input:checked');
+            checkboxes.forEach(cb => {
+                const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(cb.value);
+                mergeFiles.push({ type: 'cloud', file: null, name: cb.value, url: data.publicUrl });
+            });
+            renderMergeList();
+            document.getElementById('modal-overlay').style.display = 'none';
+        });
+
+        // Helper to process single file operations
+        async function processSingleFile(fileInputId, btnId, logicFn) {
+            const fileInput = document.getElementById(fileInputId);
+            const btn = document.getElementById(btnId);
+            
+            btn.addEventListener('click', async () => {
+                const file = fileInput.files[0];
+                if (!file) { alert(t('msg_select_files')); return; }
+                
+                const originalText = btn.textContent;
+                btn.textContent = t('msg_uploading');
+                btn.disabled = true;
+
+                try {
+                    const publicUrl = await uploadFileToSupabase(file);
+                    btn.textContent = t('msg_processing');
+                    await logicFn(publicUrl, file.name);
+                } catch (e) {
+                    console.error(e);
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        // 3. Extract Pages
+        processSingleFile('split-file-input', 'split-btn', async (url, name) => {
+            const pages = document.getElementById('split-pages-input').value;
+            await callBackendPdf('/extract-pages', { publicUrl: url, pages }, `extracted_${name}`);
+        });
+
+        // 4. Extract Text
+        processSingleFile('text-file-input', 'text-btn', async (url) => {
+            const res = await callBackendJson('/extract-text', { publicUrl: url });
+            if (res.ok) {
+                document.getElementById('text-result-card').classList.remove('hidden');
+                document.getElementById('text-output').value = res.text;
+                document.getElementById('text-info-display').textContent = `Pages: ${res.numpages}`;
+            }
+        });
+        document.getElementById('text-copy-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(document.getElementById('text-output').value);
+        });
+        document.getElementById('text-download-btn').addEventListener('click', () => {
+            const blob = new Blob([document.getElementById('text-output').value], {type: 'text/plain'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'extracted_text.txt';
+            a.click();
+        });
+
+        // 5. Info
+        processSingleFile('info-file-input', 'info-btn', async (url) => {
+            const res = await callBackendJson('/info', { publicUrl: url });
+            if (res.ok) {
+                document.getElementById('info-result-card').classList.remove('hidden');
+                document.getElementById('info-display').innerHTML = `
+                    <p><strong>Pages:</strong> ${res.pages}</p>
+                    <p><strong>Size:</strong> ${res.sizeMB} MB</p>
+                `;
+            }
+        });
+
+        // 6. Protect
+        processSingleFile('protect-file-input', 'protect-btn', async (url) => {
+            const password = document.getElementById('protect-pass').value;
+            if(!password) return alert('Password required');
+            await callBackendPdf('/protect', { publicUrl: url, password }, 'protected.pdf');
+        });
+
+        // 7. Unlock
+        processSingleFile('unlock-file-input', 'unlock-btn', async (url) => {
+            await callBackendPdf('/unlock', { publicUrl: url }, 'unlocked.pdf');
+        });
+
+        // 8. Watermark
+        processSingleFile('wm-file-input', 'wm-btn', async (url) => {
+            const text = document.getElementById('wm-text').value;
+            const color = document.getElementById('wm-color').value;
+            const opacity = parseFloat(document.getElementById('wm-opacity').value);
+            await callBackendPdf('/watermark-text', { publicUrl: url, text, color, opacity }, 'watermarked.pdf');
+        });
+
+        // 9. Rotate
+        processSingleFile('rotate-file-input', 'rotate-btn', async (url) => {
+            const angle = parseInt(document.getElementById('rotate-angle').value);
+            const pages = document.getElementById('rotate-pages').value;
+            const body = { publicUrl: url, angle };
+            if(pages) body.pages = pages;
+            await callBackendPdf('/rotate-pages', body, 'rotated.pdf');
+        });
+
+        // 10. Reorder
+        processSingleFile('reorder-file-input', 'reorder-btn', async (url) => {
+            const orderStr = document.getElementById('reorder-order').value; // "3,1,2"
+            if (!orderStr) return;
+            const order = orderStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+            await callBackendPdf('/reorder-pages', { publicUrl: url, order }, 'reordered.pdf');
+        });
+
+        // 11. Metadata
+        processSingleFile('meta-file-input', 'meta-btn', async (url) => {
+            const title = document.getElementById('meta-title').value;
+            const author = document.getElementById('meta-author').value;
+            const subject = document.getElementById('meta-subject').value;
+            const keywordsRaw = document.getElementById('meta-keywords').value;
+            const keywords = keywordsRaw ? keywordsRaw.split(',').map(s => s.trim()) : undefined;
+
+            const body = { publicUrl: url };
+            if (title) body.title = title;
+            if (author) body.author = author;
+            if (subject) body.subject = subject;
+            if (keywords) body.keywords = keywords;
+
+            await callBackendPdf('/metadata', body, 'metadata_edited.pdf');
+        });
+
+        // 12. Supabase Manager
+        async function loadSupabaseFiles() {
+            const tbody = document.querySelector('#supabase-table tbody');
+            tbody.innerHTML = '<tr><td colspan="2">Loading...</td></tr>';
+            const { data, error } = await supabase.storage.from(BUCKET_NAME).list();
+            
+            if (error || !data) {
+                tbody.innerHTML = '<tr><td colspan="2">Error loading files</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            data.forEach(file => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${file.name}</td>
+                    <td style="display:flex; gap:5px;">
+                        <button class="btn-sm btn-outline" onclick="window.copySupaUrl('${file.name}')">Link</button>
+                        <button class="btn-sm btn-outline" onclick="window.compressSupa('${file.name}')">Zip</button>
+                        <button class="btn-sm btn-danger" onclick="window.deleteSupa('${file.name}')">&times;</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.copySupaUrl = (name) => {
+            const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(name);
+            navigator.clipboard.writeText(data.publicUrl);
+            alert('URL Copied');
+        };
+
+        window.deleteSupa = async (name) => {
+            if(!confirm('Delete ' + name + '?')) return;
+            await supabase.storage.from(BUCKET_NAME).remove([name]);
+            loadSupabaseFiles();
+        };
+
+        window.compressSupa = async (name) => {
+             const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(name);
+             await callBackendPdf('/compress', { publicUrl: data.publicUrl }, `compressed_${name}`);
+        };
+
+        document.getElementById('supabase-refresh-btn').addEventListener('click', loadSupabaseFiles);
+        
+        document.getElementById('supabase-upload-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                try {
+                    await uploadFileToSupabase(file);
+                    loadSupabaseFiles();
+                } catch(e) { alert(e.message); }
+            }
+        });
+
+        window.clearHistory = () => {
+            document.querySelector('#history-table tbody').innerHTML = '';
+        };
+
+        // --- Init ---
+        
+        // Navigation Logic
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                const target = document.getElementById(item.getAttribute('data-target'));
+                target.classList.add('active');
+
+                // Special refresh for Supabase panel
+                if (item.getAttribute('data-target') === 'panel-supabase') {
+                    loadSupabaseFiles();
+                }
+            });
+        });
+
+        // Language Toggle
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            updateUI();
+        });
+
+        // Startup
+        updateUI();
+        checkHealth();
+        setInterval(checkHealth, 30000); // Check health every 30s
+
+    </script>
 </body>
 </html>
