@@ -626,6 +626,41 @@
       gap: 8px;
       flex-wrap: wrap;
     }
+    
+    .about-content {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+      background: linear-gradient(to bottom, #111827, #020617);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+
+    .about-content h2 {
+      color: var(--accent);
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .about-content p {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .about-content .developer {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px dashed var(--border);
+    }
+    
+    .about-content .developer span {
+      color: var(--text);
+    }
+
 
     @media (max-width: 900px) {
       .layout {
@@ -693,9 +728,15 @@
 
   <div class="layout">
     <aside class="sidebar">
-      <div class="sidebar-section-title" data-i18n="navMain">العمليات الأساسية</div>
+      <div class="sidebar-section-title" data-i18n="navInfoTitle">حول وأساسيات</div>
       <div class="nav-list">
-        <div class="nav-item active" data-section="compress">
+        <div class="nav-item active" data-section="about">
+          <span>
+            <span>💡</span>
+            <span data-i18n="navAbout">حول الأداة</span>
+          </span>
+        </div>
+        <div class="nav-item" data-section="compress">
           <span>
             <span>📦</span>
             <span data-i18n="navCompress">ضغط الملفات</span>
@@ -768,7 +809,23 @@
     </aside>
 
     <main class="main">
-      <section id="section-compress" class="section">
+      <section id="section-about" class="section">
+          <div class="section-header">
+              <div class="section-title" data-i18n="aboutTitle">حول PDF Master Tool</div>
+          </div>
+          <div class="about-content">
+              <h2 data-i18n="aboutWelcome">مرحباً بك في أداة PDF الشاملة!</h2>
+              <p data-i18n="aboutGoal">هدفنا هو توفير منصة احترافية وآمنة للتعامل مع ملفات PDF. سواء كنت بحاجة لضغط، دمج، تقسيم، أو حماية مستنداتك، فإن هذه الأداة مصممة لتبسيط مهامك بكفاءة عالية واعتمادية على سيرفرات متخصصة.</p>
+              <p data-i18n="aboutSecurity">الأمان والخصوصية هما أولويتنا. يتم التعامل مع ملفاتك عبر سيرفر مخصص ولا يتم تخزينها بشكل دائم بعد انتهاء العملية.</p>
+              <div class="developer">
+                  <span data-i18n="aboutDeveloper">تم التطوير بواسطة:</span>
+                  <br>
+                  Mahmoud Hassan / محمود حسن
+              </div>
+          </div>
+      </section>
+
+      <section id="section-compress" class="section" style="display:none">
         <div class="section-header">
           <div>
             <div class="section-title" data-i18n="compressTitle">ضغط ملفات PDF</div>
@@ -1255,6 +1312,13 @@
     ar: {
       appTitle: "PDF Master Tool",
       appSubtitle: "لوحة تحكم احترافية لكل أدوات الـ PDF",
+      navInfoTitle: "حول وأساسيات", // مُضاف
+      navAbout: "حول الأداة", // مُضاف
+      aboutTitle: "حول PDF Master Tool", // مُضاف
+      aboutWelcome: "مرحباً بك في أداة PDF الشاملة!", // مُضاف
+      aboutGoal: "هدفنا هو توفير منصة احترافية وآمنة للتعامل مع ملفات PDF. سواء كنت بحاجة لضغط، دمج، تقسيم، أو حماية مستنداتك، فإن هذه الأداة مصممة لتبسيط مهامك بكفاءة عالية واعتمادية على سيرفرات متخصصة.", // مُضاف
+      aboutSecurity: "الأمان والخصوصية هما أولويتنا. يتم التعامل مع ملفاتك عبر سيرفر مخصص ولا يتم تخزينها بشكل دائم بعد انتهاء العملية.", // مُضاف
+      aboutDeveloper: "تم التطوير بواسطة:", // مُضاف
       navMain: "العمليات الأساسية",
       navCompress: "ضغط الملفات",
       navMerge: "دمج الملفات",
@@ -1352,6 +1416,13 @@
     en: {
       appTitle: "PDF Master Tool",
       appSubtitle: "A professional dashboard for all PDF tools",
+      navInfoTitle: "About & Basics", // المُضاف
+      navAbout: "About Tool", // المُضاف
+      aboutTitle: "About PDF Master Tool", // المُضاف
+      aboutWelcome: "Welcome to the Comprehensive PDF Tool!", // المُضاف
+      aboutGoal: "Our goal is to provide a professional and secure platform for handling PDF files. Whether you need to compress, merge, split, or protect your documents, this tool is designed to simplify your tasks with high efficiency, relying on specialized servers.", // المُضاف
+      aboutSecurity: "Security and privacy are our priority. Your files are processed via a dedicated server and are not stored permanently after the operation is complete.", // المُضاف
+      aboutDeveloper: "Developed by:", // المُضاف
       navMain: "Core operations",
       navCompress: "Compress",
       navMerge: "Merge",
@@ -1534,7 +1605,8 @@
     btn.addEventListener("click", () => switchLanguage(btn.dataset.lang));
   });
 
-  switchLanguage("ar");
+  // التبديل إلى اللغة العربية افتراضياً (للتأكد من تطبيق التعريب بعد إضافة قسم حول)
+  switchLanguage("ar"); 
 
   document.querySelectorAll(".nav-item").forEach(item => {
     item.addEventListener("click", () => {
@@ -1545,12 +1617,13 @@
       document.querySelectorAll("main .section").forEach(sec => {
         sec.style.display = sec.id === `section-${section}` ? "block" : "none";
       });
-      // يتم تحميل قائمة Supabase عند التبديل إلى أي قسم يستخدمها (لضمان التحديث)
-      if (section === 'merge' || section === 'split' || section === 'text' || section === 'info' || section === 'protect' || section === 'unlock' || section === 'watermark' || section === 'rotate' || section === 'supabase') {
-          // يتم تحديث القائمة لاحقًا عند الضغط على زر التحديث الخاص بالقسم
-      }
+      // لا حاجة لتحميل Supabase هنا، يمكن تركها لزر التحديث الخاص بكل قسم.
     });
   });
+
+  // نجعل قسم حول نشطاً افتراضياً
+  document.querySelector('.nav-item[data-section="about"]').click();
+
 
   async function uploadToSupabase(file) {
     const fileName = `${Date.now()}-${file.name}`;
@@ -1820,7 +1893,7 @@
     loadSupabaseList(mergeSupaList, ({ fileName, publicUrl }) => {
       mergeSources.push({ type: "supabase", fileName, publicUrl });
       renderMergeList();
-      mergeSupaList.innerHTML = currentLang === 'ar' ? "تم إضافة الملف للقائمة" : "File added to list";
+      mergeSupaList.textContent = currentLang === 'ar' ? "تم إضافة الملف للقائمة" : "File added to list";
     });
   });
 
@@ -2282,6 +2355,12 @@
             </button>
         </div>
       `;
+
+      // تطبيق الترجمة على الأزرار المُنشأة حديثًا
+      row.querySelectorAll("[data-i18n]").forEach(el => {
+          const key = el.getAttribute("data-i18n");
+          if (i18n[currentLang][key]) el.textContent = i18n[currentLang][key];
+      });
 
       supaListContainer.appendChild(row);
     });
