@@ -1193,10 +1193,12 @@
               <div>
                 <div class="card-title" data-i18n="supaListTitle">قائمة الملفات</div>
               </div>
-              <button class="btn-secondary btn-sm" id="supa-refresh-btn" data-i18n="btnRefresh">تحديث</button>
+              <button class="btn-secondary btn-sm" id="supa-refresh-btn">
+                <span data-i18n="btnRefresh">تحديث</span>
+              </button>
             </div>
             <div class="card-body">
-              <div class="file-list" id="supa-file-list"></div>
+              <div class="file-list" id="supa-list-container"></div>
             </div>
           </div>
         </div>
@@ -1242,6 +1244,7 @@
 <script type="module">
   const SERVER_BASE = "https://pdf-server-navy.vercel.app";
   const SUPABASE_URL = "https://tdqewqarcvdunwuxgios.supabase.co";
+  // **ملاحظة:** يفضل إخفاء هذا المفتاح في الإنتاج الفعلي واستخدام مفتاح خدمة.
   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkcWV3cWFyY3ZkdW53dXhnaW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0ODc4NDcsImV4cCI6MjA4MTA2Mzg0N30.RSMghTLwda7kLidTohBFLqE7qCQoHs3S6l88ewUidRw";
   const BUCKET_NAME = "pdf-files";
 
@@ -1457,7 +1460,20 @@
     const time = new Date().toLocaleTimeString();
     line.innerHTML = `<span>[${time}]</span> ${message}`;
     logsConsole.prepend(line);
+    while (logsConsole.children.length > 50) { // Limit logs
+        logsConsole.removeChild(logsConsole.lastChild);
+    }
   }
+  
+  document.getElementById("logs-clear-btn").addEventListener("click", () => {
+    logsConsole.innerHTML = "";
+    logMessage("Logs cleared.");
+  });
+  
+  document.getElementById("history-clear-btn").addEventListener("click", () => {
+    historyList.innerHTML = "";
+    logMessage("History cleared.");
+  });
 
   function addHistoryEntry(type, fileName, success = true) {
     const entry = document.createElement("div");
@@ -1485,7 +1501,7 @@
 
   async function checkHealth() {
     try {
-      const res = await fetch(\`\${SERVER_BASE}/health\`);
+      const res = await fetch(`${SERVER_BASE}/health`);
       if (!res.ok) throw new Error("Health failed");
       const data = await res.json();
       statusDot.classList.add("online");
@@ -1523,36 +1539,44 @@
   document.querySelectorAll(".nav-item").forEach(item => {
     item.addEventListener("click", () => {
       const section = item.dataset.section;
-      document.querySelectorAll(".nav-item").forEach(i => i.classList.toggle("active", i === item));
+      document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+      item.classList.add("active");
+      
       document.querySelectorAll("main .section").forEach(sec => {
-        sec.style.display = sec.id === \`section-\${section}\` ? "block" : "none";
+        sec.style.display = sec.id === `section-${section}` ? "block" : "none";
       });
+      // يتم تحميل قائمة Supabase عند التبديل إلى أي قسم يستخدمها (لضمان التحديث)
+      if (section === 'merge' || section === 'split' || section === 'text' || section === 'info' || section === 'protect' || section === 'unlock' || section === 'watermark' || section === 'rotate' || section === 'supabase') {
+          // يتم تحديث القائمة لاحقًا عند الضغط على زر التحديث الخاص بالقسم
+      }
     });
   });
 
   async function uploadToSupabase(file) {
-    const fileName = \`\${Date.now()}-\${file.name}\`;
-    logMessage(\`Upload start: \${file.name}\`);
+    const fileName = `${Date.now()}-${file.name}`;
+    logMessage(`Upload start: ${file.name}`);
+    
+    // تأكد من أن الرفع يتم إلى المجلد الصحيح داخل الباكت
     const { data, error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
     if (error) {
-      logMessage(\`Upload failed: \${file.name} - \${error.message}\`, "error");
+      logMessage(`Upload failed: ${file.name} - ${error.message}`, "error");
       throw error;
     }
     const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
     const publicUrl = pub.publicUrl;
-    logMessage(\`Upload done: \${file.name}\`);
+    logMessage(`Upload done: ${file.name}`);
     return { fileName, publicUrl };
   }
 
   async function callBackendPdf(route, payload, downloadName) {
-    const res = await fetch(\`\${SERVER_BASE}/\${route}\`, {
+    const res = await fetch(`${SERVER_BASE}/${route}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
       const txt = await res.text();
-      throw new Error(txt || \`HTTP \${res.status}\`);
+      throw new Error(txt || `HTTP ${res.status}`);
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -1564,14 +1588,14 @@
   }
 
   async function callBackendJson(route, payload) {
-    const res = await fetch(\`\${SERVER_BASE}/\${route}\`, {
+    const res = await fetch(`${SERVER_BASE}/${route}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
       const txt = await res.text();
-      throw new Error(txt || \`HTTP \${res.status}\`);
+      throw new Error(txt || `HTTP ${res.status}`);
     }
     return res.json();
   }
@@ -1596,6 +1620,59 @@
       }
     });
   }
+  
+  // دالة مساعدة موحدة لإنشاء عنصر قائمة ملفات Supabase (قابل للاختيار)
+  function createSupaListItem(file, publicUrl, onSelect) {
+      const el = document.createElement("div");
+      el.className = "file-item";
+      el.innerHTML = `
+        <div class="file-item-header">
+          <div class="file-name">${file.name}</div>
+          <div class="row">
+            <button class="btn-secondary btn-sm" data-act="select">${currentLang === "ar" ? "اختيار" : "Select"}</button>
+          </div>
+        </div>
+        <div class="file-meta">
+          <span>${publicUrl.slice(0, 40)}...</span>
+        </div>
+      `;
+      el.querySelector("button").addEventListener("click", () => {
+        onSelect({ fileName: file.name, publicUrl });
+      });
+      return el;
+  }
+  
+  // دالة موحدة لتحميل قائمة ملفات Supabase
+  async function loadSupabaseList(targetEl, onAction) {
+    targetEl.innerHTML = currentLang === "ar" ? "جاري التحميل..." : "Loading...";
+    const { data, error } = await supabase.storage.from(BUCKET_NAME).list();
+    
+    targetEl.innerHTML = "";
+    if (error) {
+      targetEl.textContent = error.message;
+      return;
+    }
+    
+    // تصفية وحذف ملفات .emptyFolderPlaceholder
+    const pdfFiles = data.filter(file => file.name !== ".emptyFolderPlaceholder");
+    
+    pdfFiles.forEach(file => {
+      const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+      const publicUrl = pub.publicUrl;
+      
+      const el = createSupaListItem(file, publicUrl, onAction);
+      targetEl.appendChild(el);
+    });
+    
+    if (pdfFiles.length === 0) {
+        targetEl.textContent = currentLang === "ar" ? "لا توجد ملفات PDF في Supabase" : "No PDF files found in Supabase";
+    }
+  }
+
+
+  // ===============================
+  // ✅ Compress Section
+  // ===============================
 
   const compressDrop = document.getElementById("compress-drop");
   const compressInput = document.getElementById("compress-input");
@@ -1606,18 +1683,18 @@
   function createCompressItem(file) {
     const el = document.createElement("div");
     el.className = "file-item";
-    el.innerHTML = \`
+    el.innerHTML = `
       <div class="file-item-header">
-        <div class="file-name">\${file.name}</div>
+        <div class="file-name">${file.name}</div>
         <div class="file-status"></div>
       </div>
       <div class="file-meta">
-        <span>\${(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+        <span>${(file.size / (1024 * 1024)).toFixed(2)} MB</span>
       </div>
       <div class="file-progress">
         <div class="file-progress-bar"></div>
       </div>
-    \`;
+    `;
     return el;
   }
 
@@ -1639,14 +1716,14 @@
 
         statusEl.textContent = currentLang === "ar" ? "تم التنزيل" : "Downloaded";
         bar.style.width = "100%";
-        addHistoryEntry("compress", file.name, true);
-        logMessage(\`Compressed: \${file.name}\`);
+        addHistoryEntry("Compress", file.name, true);
+        logMessage(`Compressed: ${file.name}`);
       } catch (e) {
-        statusEl.textContent = currentLang === "ar" ? "خطأ: " + e.message : "Error: " + e.message;
+        statusEl.textContent = (currentLang === "ar" ? "خطأ: " : "Error: ") + e.message;
         bar.style.width = "100%";
         bar.style.background = "linear-gradient(to right, #f97373,#fb7185)";
-        addHistoryEntry("compress", file.name, false);
-        logMessage(\`Compress failed: \${file.name} - \${e.message}\`, "error");
+        addHistoryEntry("Compress", file.name, false);
+        logMessage(`Compress failed: ${file.name} - ${e.message}`, "error");
       }
     }
   }
@@ -1657,16 +1734,22 @@
   compressUrlBtn.addEventListener("click", async () => {
     const url = compressUrlInput.value.trim();
     if (!url) return;
-    logMessage(\`Compress from URL: \${url}\`);
+    logMessage(`Compress from URL: ${url}`);
     try {
       await callBackendPdf("compress", { publicUrl: url }, "compressed-from-url.pdf");
-      addHistoryEntry("compress/url", url, true);
+      addHistoryEntry("Compress/URL", url.slice(0, 30) + '...', true);
+      logMessage("Compression from URL successful.");
     } catch (e) {
-      addHistoryEntry("compress/url", url, false);
-      logMessage(\`Compress from URL failed: \${e.message}\`, "error");
+      addHistoryEntry("Compress/URL", url.slice(0, 30) + '...', false);
+      logMessage(`Compress from URL failed: ${e.message}`, "error");
       alert(e.message);
     }
   });
+
+
+  // ===============================
+  // ✅ Merge Section
+  // ===============================
 
   const mergeDrop = document.getElementById("merge-drop");
   const mergeInput = document.getElementById("merge-input");
@@ -1695,20 +1778,23 @@
     mergeSources.forEach((src, index) => {
       const el = document.createElement("div");
       el.className = "file-item";
-      el.innerHTML = \`
+      const fileName = src.type === "local" ? src.file.name : src.fileName;
+      const fileSize = src.type === "local" ? (src.file.size / (1024 * 1024)).toFixed(2) + " MB" : "";
+      
+      el.innerHTML = `
         <div class="file-item-header">
-          <div class="file-name">\${src.type === "local" ? src.file.name : src.fileName}</div>
+          <div class="file-name">${fileName}</div>
           <div class="row">
-            <button class="btn-secondary btn-sm" data-action="up">\u2191</button>
-            <button class="btn-secondary btn-sm" data-action="down">\u2193</button>
-            <button class="btn-danger btn-sm" data-action="remove">\u00d7</button>
+            <button class="btn-secondary btn-sm" data-action="up" title="${currentLang === 'ar' ? 'أعلى' : 'Up'}">\u2191</button>
+            <button class="btn-secondary btn-sm" data-action="down" title="${currentLang === 'ar' ? 'أسفل' : 'Down'}">\u2193</button>
+            <button class="btn-danger btn-sm" data-action="remove" title="${currentLang === 'ar' ? 'إزالة' : 'Remove'}">\u00d7</button>
           </div>
         </div>
         <div class="file-meta">
-          <span>\${src.type}</span>
-          <span>\${src.type === "local" ? (src.file.size / (1024 * 1024)).toFixed(2) + " MB" : ""}</span>
+          <span>${src.type}</span>
+          <span>${fileSize}</span>
         </div>
-      \`;
+      `;
       el.querySelectorAll("button").forEach(btn => {
         btn.addEventListener("click", () => {
           const action = btn.dataset.action;
@@ -1730,41 +1816,11 @@
     });
   }
 
-  async function loadSupabaseList(targetEl, onAction) {
-    targetEl.innerHTML = "";
-    const { data, error } = await supabase.storage.from(BUCKET_NAME).list();
-    if (error) {
-      targetEl.textContent = error.message;
-      return;
-    }
-    data.forEach(file => {
-      const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
-      const publicUrl = pub.publicUrl;
-
-      const el = document.createElement("div");
-      el.className = "file-item";
-      el.innerHTML = \`
-        <div class="file-item-header">
-          <div class="file-name">\${file.name}</div>
-          <div class="row">
-            <button class="btn-secondary btn-sm" data-act="select">\${currentLang === "ar" ? "اختيار" : "Select"}</button>
-          </div>
-        </div>
-        <div class="file-meta">
-          <span>\${publicUrl.slice(0, 40)}...</span>
-        </div>
-      \`;
-      el.querySelector("button").addEventListener("click", () => {
-        onAction({ fileName: file.name, publicUrl });
-      });
-      targetEl.appendChild(el);
-    });
-  }
-
   mergeRefreshSupa.addEventListener("click", () => {
     loadSupabaseList(mergeSupaList, ({ fileName, publicUrl }) => {
       mergeSources.push({ type: "supabase", fileName, publicUrl });
       renderMergeList();
+      mergeSupaList.innerHTML = currentLang === 'ar' ? "تم إضافة الملف للقائمة" : "File added to list";
     });
   });
 
@@ -1776,133 +1832,154 @@
     try {
       const urls = [];
       for (const src of mergeSources) {
-        if (src.type === "local") {
+        if (src.type === "local" && !src.publicUrl) {
+          logMessage(`Uploading ${src.file.name} for merge...`);
           const { publicUrl } = await uploadToSupabase(src.file);
           src.publicUrl = publicUrl;
         }
         urls.push(src.publicUrl);
       }
+      logMessage(`Calling merge endpoint for ${urls.length} files...`);
       await callBackendPdf("merge", { publicUrls: urls }, "merged.pdf");
-      addHistoryEntry("merge", urls.length + " files", true);
+      addHistoryEntry("Merge", urls.length + " files", true);
+      logMessage("Merge successful.");
     } catch (e) {
-      addHistoryEntry("merge", "error", false);
+      addHistoryEntry("Merge", "error", false);
       logMessage("Merge failed: " + e.message, "error");
       alert(e.message);
     }
   });
 
-  const splitLocalBtn = document.getElementById("split-local-btn");
-  const splitSupaRefresh = document.getElementById("split-supa-refresh");
-  const splitInput = document.getElementById("split-input");
-  const splitSupaList = document.getElementById("split-supa-list");
+
+  // ===============================
+  // ✅ File Selection Logic (Source Files)
+  // ===============================
+
+  // دالة موحدة لربط اختيار الملفات المحلية وقوائم Supabase
+  function wireSourceSelection(localBtn, inputEl, supaRefreshBtn, supaListEl, operationName) {
+      let publicUrl = null;
+      let name = null;
+      
+      function renderSourceFile() {
+          supaListEl.innerHTML = "";
+          if (name && publicUrl) {
+              const el = document.createElement("div");
+              el.className = "file-item";
+              el.innerHTML = `<div class="file-item-header"><div class="file-name">${name}</div></div>`;
+              supaListEl.appendChild(el);
+          } else {
+              supaListEl.textContent = currentLang === 'ar' ? 'لم يتم اختيار ملف' : 'No file selected';
+          }
+      }
+      
+      localBtn.addEventListener("click", () => inputEl.click());
+      inputEl.addEventListener("change", async e => {
+          const f = e.target.files[0];
+          if (!f) return;
+          try {
+              const { publicUrl: newUrl } = await uploadToSupabase(f);
+              publicUrl = newUrl;
+              name = f.name;
+              renderSourceFile();
+              logMessage(`Source file selected for ${operationName}: ${name}`);
+          } catch (err) {
+              alert(err.message);
+          }
+      });
+      
+      supaRefreshBtn.addEventListener("click", () => {
+          loadSupabaseList(supaListEl, ({ fileName, publicUrl: newUrl }) => {
+              publicUrl = newUrl;
+              name = fileName;
+              renderSourceFile();
+              logMessage(`Supabase file selected for ${operationName}: ${name}`);
+              // لضمان ظهور الملف المختار فقط
+              supaListEl.textContent = currentLang === 'ar' ? 'تم اختيار الملف بنجاح.' : 'File selected successfully.';
+          });
+      });
+      
+      // إرجاع وظيفة للحصول على البيانات الحالية
+      return {
+          getPublicUrl: () => publicUrl,
+          getFileName: () => name,
+          reset: () => { publicUrl = null; name = null; renderSourceFile(); }
+      };
+  }
+  
+  // ===============================
+  // ✅ Split Section
+  // ===============================
+  
+  const splitSource = wireSourceSelection(
+      document.getElementById("split-local-btn"),
+      document.getElementById("split-input"),
+      document.getElementById("split-supa-refresh"),
+      document.getElementById("split-supa-list"),
+      "Split"
+  );
   const splitPagesInput = document.getElementById("split-pages-input");
   const splitExtractBtn = document.getElementById("split-extract-btn");
 
-  let splitPublicUrl = null;
-  let splitName = null;
-
-  splitLocalBtn.addEventListener("click", () => splitInput.click());
-  splitInput.addEventListener("change", async e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    try {
-      const { publicUrl } = await uploadToSupabase(f);
-      splitPublicUrl = publicUrl;
-      splitName = f.name;
-      splitSupaList.innerHTML = "";
-      const el = document.createElement("div");
-      el.className = "file-item";
-      el.innerHTML = \`<div class="file-item-header"><div class="file-name">\${f.name}</div></div>\`;
-      splitSupaList.appendChild(el);
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-
-  splitSupaRefresh.addEventListener("click", () => {
-    loadSupabaseList(splitSupaList, ({ fileName, publicUrl }) => {
-      splitPublicUrl = publicUrl;
-      splitName = fileName;
-      splitSupaList.innerHTML = "";
-      const el = document.createElement("div");
-      el.className = "file-item";
-      el.innerHTML = \`<div class="file-item-header"><div class="file-name">\${fileName}</div></div>\`;
-      splitSupaList.appendChild(el);
-    });
-  });
-
   splitExtractBtn.addEventListener("click", async () => {
-    if (!splitPublicUrl) {
+    const publicUrl = splitSource.getPublicUrl();
+    const splitName = splitSource.getFileName();
+    
+    if (!publicUrl) {
       alert(currentLang === "ar" ? "اختر ملفًا أولًا" : "Select a file first");
       return;
     }
     const pages = splitPagesInput.value.trim();
     if (!pages) return;
     try {
-      await callBackendPdf("extract-pages", { publicUrl: splitPublicUrl, pages }, "extracted-" + (splitName || "pages") + ".pdf");
-      addHistoryEntry("extract-pages", splitName || "file", true);
+      logMessage(`Extracting pages ${pages} from ${splitName}...`);
+      await callBackendPdf("extract-pages", { publicUrl, pages }, "extracted-" + (splitName || "pages") + ".pdf");
+      addHistoryEntry("Extract Pages", splitName || "file", true);
+      logMessage("Page extraction successful.");
     } catch (e) {
-      addHistoryEntry("extract-pages", splitName || "file", false);
+      addHistoryEntry("Extract Pages", splitName || "file", false);
       logMessage("Extract pages failed: " + e.message, "error");
       alert(e.message);
     }
   });
 
-  const textLocalBtn = document.getElementById("text-local-btn");
-  const textSupaRefresh = document.getElementById("text-supa-refresh");
-  const textInput = document.getElementById("text-input");
-  const textSupaList = document.getElementById("text-supa-list");
+
+  // ===============================
+  // ✅ Text Section
+  // ===============================
+
+  const textSource = wireSourceSelection(
+      document.getElementById("text-local-btn"),
+      document.getElementById("text-input"),
+      document.getElementById("text-supa-refresh"),
+      document.getElementById("text-supa-list"),
+      "Text Extract"
+  );
   const textExtractBtn = document.getElementById("text-extract-btn");
   const textOutput = document.getElementById("text-output");
   const textCopyBtn = document.getElementById("text-copy-btn");
   const textDownloadBtn = document.getElementById("text-download-btn");
 
-  let textPublicUrl = null;
-  let textName = null;
   let lastExtractedText = "";
 
-  textLocalBtn.addEventListener("click", () => textInput.click());
-  textInput.addEventListener("change", async e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    try {
-      const { publicUrl } = await uploadToSupabase(f);
-      textPublicUrl = publicUrl;
-      textName = f.name;
-      textSupaList.innerHTML = "";
-      const el = document.createElement("div");
-      el.className = "file-item";
-      el.innerHTML = \`<div class="file-item-header"><div class="file-name">\${f.name}</div></div>\`;
-      textSupaList.appendChild(el);
-    } catch (err) {
-      alert(err.message);
-    }
-  });
-
-  textSupaRefresh.addEventListener("click", () => {
-    loadSupabaseList(textSupaList, ({ fileName, publicUrl }) => {
-      textPublicUrl = publicUrl;
-      textName = fileName;
-      textSupaList.innerHTML = "";
-      const el = document.createElement("div");
-      el.className = "file-item";
-      el.innerHTML = \`<div class="file-item-header"><div class="file-name">\${fileName}</div></div>\`;
-      textSupaList.appendChild(el);
-    });
-  });
-
   textExtractBtn.addEventListener("click", async () => {
-    if (!textPublicUrl) {
+    const publicUrl = textSource.getPublicUrl();
+    const textName = textSource.getFileName();
+    
+    if (!publicUrl) {
       alert(currentLang === "ar" ? "اختر ملفًا أولًا" : "Select a file first");
       return;
     }
+    textOutput.textContent = currentLang === 'ar' ? 'جاري استخراج النص...' : 'Extracting text...';
     try {
-      const data = await callBackendJson("extract-text", { publicUrl: textPublicUrl });
+      logMessage(`Extracting text from ${textName}...`);
+      const data = await callBackendJson("extract-text", { publicUrl });
       lastExtractedText = data.text || "";
       textOutput.textContent = lastExtractedText;
-      addHistoryEntry("extract-text", textName || "file", true);
+      addHistoryEntry("Extract Text", textName || "file", true);
+      logMessage("Text extraction successful.");
     } catch (e) {
-      addHistoryEntry("extract-text", textName || "file", false);
+      textOutput.textContent = (currentLang === 'ar' ? 'خطأ في الاستخراج: ' : 'Extraction Error: ') + e.message;
+      addHistoryEntry("Extract Text", textName || "file", false);
       logMessage("Extract text failed: " + e.message, "error");
       alert(e.message);
     }
@@ -1913,7 +1990,9 @@
     try {
       await navigator.clipboard.writeText(lastExtractedText);
       logMessage("Text copied");
-    } catch {}
+    } catch (e) {
+        logMessage(`Copy failed: ${e.message}`, "error");
+    }
   });
 
   textDownloadBtn.addEventListener("click", () => {
@@ -1922,767 +2001,344 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = (textName || "extracted") + ".txt";
+    a.download = (textSource.getFileName() || "extracted") + ".txt";
     a.click();
     URL.revokeObjectURL(url);
+    logMessage("Text downloaded.");
   });
+  
+  
+  // ===============================
+  // ✅ Info Section (Modified)
+  // ===============================
 
-  const infoLocalBtn = document.getElementById("info-local-btn");
-const infoSupaRefresh = document.getElementById("info-supa-refresh");
-const infoInput = document.getElementById("info-input");
-const infoSupaList = document.getElementById("info-supa-list");
+  const infoSource = wireSourceSelection(
+      document.getElementById("info-local-btn"),
+      document.getElementById("info-input"),
+      document.getElementById("info-supa-refresh"),
+      document.getElementById("info-supa-list"),
+      "PDF Info"
+  );
+  const infoFetchBtn = document.getElementById("info-fetch-btn");
+  const infoResultChips = document.getElementById("info-result-chips");
 
-// تحميل ملفات Supabase داخل قائمة المعلومات
-async function loadInfoSupabaseFiles() {
-  infoSupaList.innerHTML = "<option>Loading...</option>";
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .list();
-
-  if (error) {
-    infoSupaList.innerHTML = "<option>Error loading files</option>";
-    return;
-  }
-
-  infoSupaList.innerHTML = "<option value=''>اختر ملف</option>";
-
-  data.forEach(file => {
-    const opt = document.createElement("option");
-    opt.value = file.name;
-    opt.textContent = file.name;
-    infoSupaList.appendChild(opt);
-  });
-}
-
-// زر تحديث قائمة Supabase
-infoSupaRefresh.addEventListener("click", loadInfoSupabaseFiles);
-
-// الحصول على publicUrl للملف المختار
-async function getInfoPublicUrl() {
-  // من الجهاز المحلي
-  if (infoLocalBtn.checked) {
-    const file = infoInput.files[0];
-    if (!file) {
-      alert("اختر ملف PDF أولاً");
-      return null;
+  infoFetchBtn.addEventListener("click", async () => {
+    const publicUrl = infoSource.getPublicUrl();
+    const infoName = infoSource.getFileName();
+    
+    if (!publicUrl) {
+      alert(currentLang === "ar" ? "اختر ملفًا أولًا" : "Select a file first");
+      return;
     }
+    
+    infoResultChips.innerHTML = currentLang === "ar" ? "جاري جلب المعلومات..." : "Fetching info...";
+    
+    try {
+      logMessage(`Fetching info for ${infoName}...`);
+      const data = await callBackendJson("info", { publicUrl });
+      
+      infoResultChips.innerHTML = `
+        <div class="chip" data-i18n="pagesCount">${currentLang === "ar" ? "الصفحات" : "Pages"}: ${data.pages}</div>
+        <div class="chip" data-i18n="fileSize">${currentLang === "ar" ? "الحجم" : "Size"}: ${data.sizeMB.toFixed(2)} MB</div>
+        <div class="chip" data-i18n="sizeBytes">${currentLang === "ar" ? "بالبايت" : "Bytes"}: ${data.sizeBytes}</div>
+      `;
+      
+      addHistoryEntry("Info", infoName || "file", true);
+      logMessage("Info fetched successfully.");
+    } catch (e) {
+      infoResultChips.innerHTML = `<div class="chip" style="background: var(--danger); color: white;">${currentLang === "ar" ? "خطأ: " : "Error: "}${e.message}</div>`;
+      addHistoryEntry("Info", infoName || "file", false);
+      logMessage("Info fetching failed: " + e.message, "error");
+      alert(e.message);
+    }
+  });
+  
+  
+  // ===============================
+  // ✅ Protect Section
+  // ===============================
+  
+  const protectSource = wireSourceSelection(
+      document.getElementById("protect-local-btn"),
+      document.getElementById("protect-input"),
+      document.getElementById("protect-supa-refresh"),
+      document.getElementById("protect-supa-list"),
+      "Protect"
+  );
+  const protectBtn = document.getElementById("protect-btn");
+  const protectPasswordInput = document.getElementById("protect-password-input");
 
-    const fileName = `${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(fileName, file);
+  protectBtn.addEventListener("click", async () => {
+    const publicUrl = protectSource.getPublicUrl();
+    const protectName = protectSource.getFileName();
+    const password = protectPasswordInput.value.trim();
+    
+    if (!publicUrl) return alert(currentLang === "ar" ? "اختر ملف" : "Select a file");
+    if (!password) return alert(currentLang === "ar" ? "أدخل كلمة مرور" : "Enter a password");
 
+    try {
+        logMessage(`Protecting file ${protectName}...`);
+        await callBackendPdf("protect", { publicUrl, password }, "protected-" + (protectName || "file") + ".pdf");
+        addHistoryEntry("Protect", protectName || "file", true);
+        logMessage("Protection successful.");
+    } catch (e) {
+        addHistoryEntry("Protect", protectName || "file", false);
+        logMessage("Protection failed: " + e.message, "error");
+        alert(e.message);
+    }
+  });
+  
+  // ===============================
+  // ✅ Unlock Section
+  // ===============================
+
+  const unlockSource = wireSourceSelection(
+      document.getElementById("unlock-local-btn"),
+      document.getElementById("unlock-input"),
+      document.getElementById("unlock-supa-refresh"),
+      document.getElementById("unlock-supa-list"),
+      "Unlock"
+  );
+  const unlockBtn = document.getElementById("unlock-btn");
+
+  unlockBtn.addEventListener("click", async () => {
+    const publicUrl = unlockSource.getPublicUrl();
+    const unlockName = unlockSource.getFileName();
+    
+    if (!publicUrl) return alert(currentLang === "ar" ? "اختر ملف" : "Select a file");
+
+    try {
+        logMessage(`Unlocking file ${unlockName}...`);
+        await callBackendPdf("unlock", { publicUrl }, "unlocked-" + (unlockName || "file") + ".pdf");
+        addHistoryEntry("Unlock", unlockName || "file", true);
+        logMessage("Unlock successful.");
+    } catch (e) {
+        addHistoryEntry("Unlock", unlockName || "file", false);
+        logMessage("Unlock failed: " + e.message, "error");
+        alert(e.message);
+    }
+  });
+
+
+  // ===============================
+  // ✅ Watermark Section
+  // ===============================
+
+  const watermarkSource = wireSourceSelection(
+      document.getElementById("wm-local-btn"),
+      document.getElementById("wm-input"),
+      document.getElementById("wm-supa-refresh"),
+      document.getElementById("wm-supa-list"),
+      "Watermark"
+  );
+  const wmApplyBtn = document.getElementById("wm-apply-btn");
+  const wmTextInput = document.getElementById("wm-text-input");
+  const wmColorSelect = document.getElementById("wm-color-select");
+  const wmOpacityInput = document.getElementById("wm-opacity-input");
+
+  wmApplyBtn.addEventListener("click", async () => {
+    const publicUrl = watermarkSource.getPublicUrl();
+    const watermarkName = watermarkSource.getFileName();
+    const text = wmTextInput.value.trim();
+    
+    if (!publicUrl) return alert(currentLang === "ar" ? "اختر ملف" : "Select a file");
+    if (!text) return alert(currentLang === "ar" ? "أدخل نص العلامة المائية" : "Enter watermark text");
+    
+    const opacity = parseFloat(wmOpacityInput.value);
+
+    const payload = {
+        publicUrl,
+        text,
+        color: wmColorSelect.value,
+        opacity: isNaN(opacity) ? 0.2 : opacity
+    };
+
+    try {
+        logMessage(`Applying watermark to ${watermarkName}...`);
+        await callBackendPdf("watermark-text", payload, "watermarked-" + (watermarkName || "file") + ".pdf");
+        addHistoryEntry("Watermark", watermarkName || "file", true);
+        logMessage("Watermark successful.");
+    } catch (e) {
+        addHistoryEntry("Watermark", watermarkName || "file", false);
+        logMessage("Watermark failed: " + e.message, "error");
+        alert(e.message);
+    }
+  });
+
+
+  // ===============================
+  // ✅ Rotate Pages Section
+  // ===============================
+
+  const rotateSource = wireSourceSelection(
+      document.getElementById("rot-local-btn"),
+      document.getElementById("rot-input"),
+      document.getElementById("rot-supa-refresh"),
+      document.getElementById("rot-supa-list"),
+      "Rotate"
+  );
+  const rotApplyBtn = document.getElementById("rot-apply-btn");
+  const rotAngleSelect = document.getElementById("rot-angle-select");
+  const rotPagesInput = document.getElementById("rot-pages-input");
+
+  rotApplyBtn.addEventListener("click", async () => {
+    const publicUrl = rotateSource.getPublicUrl();
+    const rotateName = rotateSource.getFileName();
+    const angle = parseInt(rotAngleSelect.value);
+    const pages = rotPagesInput.value.trim();
+    
+    if (!publicUrl) return alert(currentLang === "ar" ? "اختر ملف" : "Select a file");
+    
+    const payload = { publicUrl, angle };
+    if (pages) payload.pages = pages;
+
+    try {
+        logMessage(`Rotating file ${rotateName} by ${angle}°...`);
+        await callBackendPdf("rotate-pages", payload, "rotated-" + (rotateName || "file") + ".pdf");
+        addHistoryEntry("Rotate", rotateName || "file", true);
+        logMessage("Rotation successful.");
+    } catch (e) {
+        addHistoryEntry("Rotate", rotateName || "file", false);
+        logMessage("Rotation failed: " + e.message, "error");
+        alert(e.message);
+    }
+  });
+  
+  // ===============================
+  // ✅ Reorder Pages Subsection
+  // ===============================
+
+  // يتم استخدام نفس دالة rotateSource لأنها تخص نفس قسم اختيار الملف
+  const reorderApplyBtn = document.getElementById("reorder-apply-btn");
+  const reorderInput = document.getElementById("reorder-input");
+
+  reorderApplyBtn.addEventListener("click", async () => {
+    const publicUrl = rotateSource.getPublicUrl(); // استخدام نفس المصدر
+    const rotateName = rotateSource.getFileName();
+    const orderStr = reorderInput.value.trim();
+    
+    if (!publicUrl) return alert(currentLang === "ar" ? "اختر ملف" : "Select a file");
+    if (!orderStr) return alert(currentLang === "ar" ? "أدخل ترتيب الصفحات" : "Enter pages order");
+
+    const order = orderStr.split(",").map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n > 0);
+
+    if (order.length === 0) return alert(currentLang === "ar" ? "صيغة الترتيب غير صحيحة" : "Invalid order format");
+
+    try {
+        logMessage(`Reordering pages for ${rotateName}...`);
+        await callBackendPdf("reorder-pages", { publicUrl, order }, "reordered-" + (rotateName || "file") + ".pdf");
+        addHistoryEntry("Reorder", rotateName || "file", true);
+        logMessage("Reorder successful.");
+    } catch (e) {
+        addHistoryEntry("Reorder", rotateName || "file", false);
+        logMessage("Reorder failed: " + e.message, "error");
+        alert(e.message);
+    }
+  });
+
+
+  // ===============================
+  // ✅ Supabase File Manager
+  // ===============================
+
+  const supaListContainer = document.getElementById("supa-list-container");
+  const supaRefreshBtn = document.getElementById("supa-refresh-btn");
+  const supaUploadDrop = document.getElementById("supa-upload-drop");
+  const supaUploadInput = document.getElementById("supa-upload-input");
+
+  // دالة خاصة لإنشاء عناصر قائمة المدير (مع أزرار الإدارة)
+  async function loadSupabaseManager() {
+    supaListContainer.innerHTML = currentLang === "ar" ? "جاري التحميل..." : "Loading...";
+    const { data, error } = await supabase.storage.from(BUCKET_NAME).list();
+    
+    supaListContainer.innerHTML = "";
     if (error) {
-      alert("فشل رفع الملف");
-      return null;
+        supaListContainer.textContent = error.message;
+        return;
     }
-
-    const { data } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
-  }
-
-  // من Supabase
-  const selected = infoSupaList.value;
-  if (!selected) {
-    alert("اختر ملف من Supabase");
-    return null;
-  }
-
-  const { data } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(selected);
-
-  return data.publicUrl;
-}
-
-// جلب معلومات PDF من السيرفر
-async function fetchPdfInfo(publicUrl) {
-  const response = await fetch(`${SERVER_BASE}/info`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ publicUrl })
-  });
-
-  if (!response.ok) {
-    throw new Error("فشل في جلب معلومات الملف");
-  }
-
-  return await response.json();
-}
-
-// زر تنفيذ العملية
-document.getElementById("info-fetch-btn").addEventListener("click", async () => {
-  const resultBox = document.getElementById("info-result");
-  resultBox.innerHTML = "جاري التحميل...";
-
-  try {
-    const publicUrl = await getInfoPublicUrl();
-    if (!publicUrl) return;
-
-    const info = await fetchPdfInfo(publicUrl);
-
-    resultBox.innerHTML = `
-      <div class="info-card">
-        <p><strong>عدد الصفحات:</strong> ${info.pages}</p>
-        <p><strong>الحجم:</strong> ${info.sizeMB} MB</p>
-        <p><strong>الحجم بالبايت:</strong> ${info.sizeBytes}</p>
-      </div>
-    `;
-  } catch (err) {
-    resultBox.innerHTML = `<span style="color:red;">${err.message}</span>`;
-  }
-});
-// ===============================
-// ✅ Protect PDF
-// ===============================
-
-const protectBtn = document.getElementById("protect-btn");
-const protectPassword = document.getElementById("protect-password");
-const protectLocalBtn = document.getElementById("protect-local-btn");
-const protectInput = document.getElementById("protect-input");
-const protectSupaList = document.getElementById("protect-supa-list");
-const protectSupaRefresh = document.getElementById("protect-supa-refresh");
-
-protectLocalBtn.addEventListener("change", () => {
-  protectInput.style.display = "block";
-  protectSupaList.style.display = "none";
-});
-
-document.getElementById("protect-supa-btn").addEventListener("change", () => {
-  protectInput.style.display = "none";
-  protectSupaList.style.display = "block";
-  loadProtectSupabaseFiles();
-});
-
-async function loadProtectSupabaseFiles() {
-  protectSupaList.innerHTML = "<option>Loading...</option>";
-
-  const { data } = await supabase.storage.from(BUCKET_NAME).list();
-
-  protectSupaList.innerHTML = "<option value=''>اختر ملف</option>";
-  data.forEach(f => {
-    const opt = document.createElement("option");
-    opt.value = f.name;
-    opt.textContent = f.name;
-    protectSupaList.appendChild(opt);
-  });
-}
-
-protectSupaRefresh.addEventListener("click", loadProtectSupabaseFiles);
-
-async function getProtectPublicUrl() {
-  if (protectLocalBtn.checked) {
-    const file = protectInput.files[0];
-    if (!file) return null;
-
-    const fileName = `${Date.now()}-${file.name}`;
-    await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
-
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-    return data.publicUrl;
-  }
-
-  const selected = protectSupaList.value;
-  if (!selected) return null;
-
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(selected);
-  return data.publicUrl;
-}
-
-protectBtn.addEventListener("click", async () => {
-  const password = protectPassword.value.trim();
-  if (!password) return alert("أدخل كلمة مرور");
-
-  const publicUrl = await getProtectPublicUrl();
-  if (!publicUrl) return alert("اختر ملف");
-
-  const response = await fetch(`${SERVER_BASE}/protect`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ publicUrl, password })
-  });
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "protected.pdf";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-
-// ===============================
-// ✅ Unlock PDF
-// ===============================
-
-const unlockBtn = document.getElementById("unlock-btn");
-const unlockLocalBtn = document.getElementById("unlock-local-btn");
-const unlockInput = document.getElementById("unlock-input");
-const unlockSupaList = document.getElementById("unlock-supa-list");
-const unlockSupaRefresh = document.getElementById("unlock-supa-refresh");
-
-unlockLocalBtn.addEventListener("change", () => {
-  unlockInput.style.display = "block";
-  unlockSupaList.style.display = "none";
-});
-
-document.getElementById("unlock-supa-btn").addEventListener("change", () => {
-  unlockInput.style.display = "none";
-  unlockSupaList.style.display = "block";
-  loadUnlockSupabaseFiles();
-});
-
-async function loadUnlockSupabaseFiles() {
-  unlockSupaList.innerHTML = "<option>Loading...</option>";
-
-  const { data } = await supabase.storage.from(BUCKET_NAME).list();
-
-  unlockSupaList.innerHTML = "<option value=''>اختر ملف</option>";
-  data.forEach(f => {
-    const opt = document.createElement("option");
-    opt.value = f.name;
-    opt.textContent = f.name;
-    unlockSupaList.appendChild(opt);
-  });
-}
-
-unlockSupaRefresh.addEventListener("click", loadUnlockSupabaseFiles);
-
-async function getUnlockPublicUrl() {
-  if (unlockLocalBtn.checked) {
-    const file = unlockInput.files[0];
-    if (!file) return null;
-
-    const fileName = `${Date.now()}-${file.name}`;
-    await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
-
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-    return data.publicUrl;
-  }
-
-  const selected = unlockSupaList.value;
-  if (!selected) return null;
-
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(selected);
-  return data.publicUrl;
-}
-
-unlockBtn.addEventListener("click", async () => {
-  const publicUrl = await getUnlockPublicUrl();
-  if (!publicUrl) return alert("اختر ملف");
-
-  const response = await fetch(`${SERVER_BASE}/unlock`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ publicUrl })
-  });
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "unlocked.pdf";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-
-// ===============================
-// ✅ Watermark Text
-// ===============================
-
-const watermarkBtn = document.getElementById("watermark-btn");
-const watermarkText = document.getElementById("watermark-text");
-const watermarkColor = document.getElementById("watermark-color");
-const watermarkOpacity = document.getElementById("watermark-opacity");
-const watermarkLocalBtn = document.getElementById("watermark-local-btn");
-const watermarkInput = document.getElementById("watermark-input");
-const watermarkSupaList = document.getElementById("watermark-supa-list");
-const watermarkSupaRefresh = document.getElementById("watermark-supa-refresh");
-
-watermarkLocalBtn.addEventListener("change", () => {
-  watermarkInput.style.display = "block";
-  watermarkSupaList.style.display = "none";
-});
-
-document.getElementById("watermark-supa-btn").addEventListener("change", () => {
-  watermarkInput.style.display = "none";
-  watermarkSupaList.style.display = "block";
-  loadWatermarkSupabaseFiles();
-});
-
-async function loadWatermarkSupabaseFiles() {
-  watermarkSupaList.innerHTML = "<option>Loading...</option>";
-
-  const { data } = await supabase.storage.from(BUCKET_NAME).list();
-
-  watermarkSupaList.innerHTML = "<option value=''>اختر ملف</option>";
-  data.forEach(f => {
-    const opt = document.createElement("option");
-    opt.value = f.name;
-    opt.textContent = f.name;
-    watermarkSupaList.appendChild(opt);
-  });
-}
-
-watermarkSupaRefresh.addEventListener("click", loadWatermarkSupabaseFiles);
-
-async function getWatermarkPublicUrl() {
-  if (watermarkLocalBtn.checked) {
-    const file = watermarkInput.files[0];
-    if (!file) return null;
-
-    const fileName = `${Date.now()}-${file.name}`;
-    await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
-
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-    return data.publicUrl;
-  }
-
-  const selected = watermarkSupaList.value;
-  if (!selected) return null;
-
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(selected);
-  return data.publicUrl;
-}
-
-watermarkBtn.addEventListener("click", async () => {
-  const text = watermarkText.value.trim();
-  if (!text) return alert("أدخل نص العلامة المائية");
-
-  const publicUrl = await getWatermarkPublicUrl();
-  if (!publicUrl) return alert("اختر ملف");
-
-  const payload = {
-    publicUrl,
-    text,
-    color: watermarkColor.value,
-    opacity: parseFloat(watermarkOpacity.value)
-  };
-
-  const response = await fetch(`${SERVER_BASE}/watermark-text`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "watermarked.pdf";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-
-// ===============================
-// ✅ Rotate Pages
-// ===============================
-
-const rotateBtn = document.getElementById("rotate-btn");
-const rotateAngle = document.getElementById("rotate-angle");
-const rotatePages = document.getElementById("rotate-pages");
-const rotateLocalBtn = document.getElementById("rotate-local-btn");
-const rotateInput = document.getElementById("rotate-input");
-const rotateSupaList = document.getElementById("rotate-supa-list");
-const rotateSupaRefresh = document.getElementById("rotate-supa-refresh");
-
-rotateLocalBtn.addEventListener("change", () => {
-  rotateInput.style.display = "block";
-  rotateSupaList.style.display = "none";
-});
-
-document.getElementById("rotate-supa-btn").addEventListener("change", () => {
-  rotateInput.style.display = "none";
-  rotateSupaList.style.display = "block";
-  loadRotateSupabaseFiles();
-});
-
-async function loadRotateSupabaseFiles() {
-  rotateSupaList.innerHTML = "<option>Loading...</option>";
-
-  const { data } = await supabase.storage.from(BUCKET_NAME).list();
-
-  rotateSupaList.innerHTML = "<option value=''>اختر ملف</option>";
-  data.forEach(f => {
-    const opt = document.createElement("option");
-    opt.value = f.name;
-    opt.textContent = f.name;
-    rotateSupaList.appendChild(opt);
-  });
-}
-
-rotateSupaRefresh.addEventListener("click", loadRotateSupabaseFiles);
-
-async function getRotatePublicUrl() {
-  if (rotateLocalBtn.checked) {
-    const file = rotateInput.files[0];
-    if (!file) return null;
-
-    const fileName = `${Date.now()}-${file.name}`;
-    await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
-
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-    return data.publicUrl;
-  }
-
-  const selected = rotateSupaList.value;
-  if (!selected) return null;
-
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(selected);
-  return data.publicUrl;
-}
-
-rotateBtn.addEventListener("click", async () => {
-  const angle = parseInt(rotateAngle.value);
-  const pages = rotatePages.value.trim();
-
-  const publicUrl = await getRotatePublicUrl();
-  if (!publicUrl) return alert("اختر ملف");
-
-  const payload = { publicUrl, angle };
-  if (pages) payload.pages = pages;
-
-  const response = await fetch(`${SERVER_BASE}/rotate-pages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "rotated.pdf";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-
-// ===============================
-// ✅ Reorder Pages
-// ===============================
-
-const reorderBtn = document.getElementById("reorder-btn");
-const reorderOrder = document.getElementById("reorder-order");
-const reorderLocalBtn = document.getElementById("reorder-local-btn");
-const reorderInput = document.getElementById("reorder-input");
-const reorderSupaList = document.getElementById("reorder-supa-list");
-const reorderSupaRefresh = document.getElementById("reorder-supa-refresh");
-
-reorderLocalBtn.addEventListener("change", () => {
-  reorderInput.style.display = "block";
-  reorderSupaList.style.display = "none";
-});
-
-document.getElementById("reorder-supa-btn").addEventListener("change", () => {
-  reorderInput.style.display = "none";
-  reorderSupaList.style.display = "block";
-  loadReorderSupabaseFiles();
-});
-
-async function loadReorderSupabaseFiles() {
-  reorderSupaList.innerHTML = "<option>Loading...</option>";
-
-  const { data } = await supabase.storage.from(BUCKET_NAME).list();
-
-  reorderSupaList.innerHTML = "<option value=''>اختر ملف</option>";
-  data.forEach(f => {
-    const opt = document.createElement("option");
-    opt.value = f.name;
-    opt.textContent = f.name;
-    reorderSupaList.appendChild(opt);
-  });
-}
-
-reorderSupaRefresh.addEventListener("click", loadReorderSupabaseFiles);
-
-async function getReorderPublicUrl() {
-  if (reorderLocalBtn.checked) {
-    const file = reorderInput.files[0];
-    if (!file) return null;
-
-    const fileName = `${Date.now()}-${file.name}`;
-    await supabase.storage.from(BUCKET_NAME).upload(fileName, file);
-
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-    return data.publicUrl;
-  }
-
-  const selected = reorderSupaList.value;
-  if (!selected) return null;
-
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(selected);
-  return data.publicUrl;
-}
-
-reorderBtn.addEventListener("click", async () => {
-  const orderStr = reorderOrder.value.trim();
-  if (!orderStr) return alert("أدخل ترتيب الصفحات");
-
-  const order = orderStr.split(",").map(n => parseInt(n.trim()));
-
-  const publicUrl = await getReorderPublicUrl();
-  if (!publicUrl) return alert("اختر ملف");
-
-  const response = await fetch(`${SERVER_BASE}/reorder-pages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ publicUrl, order })
-  });
-
-  const blob = await response.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "reordered.pdf";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-
-// ===============================
-// ✅ Supabase File Manager
-// ===============================
-
-const supaListContainer = document.getElementById("supa-list");
-const supaRefreshBtn = document.getElementById("supa-refresh");
-
-async function loadSupabaseManager() {
-  supaListContainer.innerHTML = "جاري التحميل...";
-
-  const { data } = await supabase.storage.from(BUCKET_NAME).list();
-
-  supaListContainer.innerHTML = "";
-
-  data.forEach(file => {
-    const row = document.createElement("div");
-    row.className = "supa-row";
-
-    row.innerHTML = `
-      <span>${file.name}</span>
-      <button class="mini-btn" data-action="copy" data-name="${file.name}">نسخ</button>
-      <button class="mini-btn" data-action="compress" data-name="${file.name}">ضغط</button>
-      <button class="mini-btn" data-action="info" data-name="${file.name}">معلومات</button>
-      <button class="mini-btn danger" data-action="delete" data-name="${file.name}">حذف</button>
-    `;
-
-    supaListContainer.appendChild(row);
-  });
-}
-
-supaRefreshBtn.addEventListener("click", loadSupabaseManager);
-
-supaListContainer.addEventListener("click", async (e) => {
-  const btn = e.target;
-  if (!btn.dataset.action) return;
-
-  const name = btn.dataset.name;
-  const action = btn.dataset.action;
-
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(name);
-  const publicUrl = data.publicUrl;
-
-  if (action === "copy") {
-    navigator.clipboard.writeText(publicUrl);
-    alert("تم نسخ الرابط");
-  }
-
-  if (action === "compress") {
-    const response = await fetch(`${SERVER_BASE}/compress`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ publicUrl })
+    
+    const pdfFiles = data.filter(file => file.name !== ".emptyFolderPlaceholder");
+
+    pdfFiles.forEach(file => {
+      const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+      const publicUrl = pub.publicUrl;
+
+      const row = document.createElement("div");
+      row.className = "file-item"; // استخدم نفس تصميم file-item لتحقيق التناسق
+      
+      row.innerHTML = `
+        <div class="file-item-header">
+            <div class="file-name">${file.name}</div>
+        </div>
+        <div class="file-meta row">
+            <button class="btn-secondary btn-sm" data-action="copy" data-name="${file.name}">
+                <span data-i18n="btnCopy">نسخ الرابط</span>
+            </button>
+            <button class="btn-secondary btn-sm" data-action="compress" data-name="${file.name}">
+                <span data-i18n="navCompress">ضغط</span>
+            </button>
+            <button class="btn-danger btn-sm" data-action="delete" data-name="${file.name}">
+                <span data-i18n="btnDelete">حذف</span>
+            </button>
+        </div>
+      `;
+
+      supaListContainer.appendChild(row);
     });
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "compressed.pdf";
-    a.click();
-    URL.revokeObjectURL(url);
+    
+    if (pdfFiles.length === 0) {
+        supaListContainer.textContent = currentLang === "ar" ? "لا توجد ملفات PDF في Supabase" : "No PDF files found in Supabase";
+    }
   }
 
-  if (action === "info") {
-    const response = await fetch(`${SERVER_BASE}/info`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ publicUrl })
-    });
+  supaRefreshBtn.addEventListener("click", loadSupabaseManager);
 
-    const info = await response.json();
-    alert(`الصفحات: ${info.pages}\nالحجم: ${info.sizeMB} MB`);
-  }
-
-  if (action === "delete") {
-    await supabase.storage.from(BUCKET_NAME).remove([name]);
-    loadSupabaseManager();
-  }
-});
-
-
-// ===============================
-// ✅ History & Logs
-// ===============================
-
-const historyList = document.getElementById("history-list");
-const clearHistoryBtn = document.getElementById("clear-history");
-const logsBox = document.getElementById("logs-box");
-const clearLogsBtn = document.getElementById("clear-logs");
-
-let historyData = [];
-let logsData = [];
-
-function addHistory(entry) {
-  historyData.unshift(entry);
-  if (historyData.length > 30) historyData.pop();
-  renderHistory();
-}
-
-function renderHistory() {
-  historyList.innerHTML = "";
-  historyData.forEach(h => {
-    const div = document.createElement("div");
-    div.className = "history-item";
-    div.innerHTML = `<strong>${h.type}</strong> - ${h.file} - ${h.time}`;
-    historyList.appendChild(div);
+  // ربط الـ Drop & Input
+  wireFileDrop(supaUploadDrop, supaUploadInput, async (files) => {
+    for (const file of files) {
+        try {
+            await uploadToSupabase(file);
+            addHistoryEntry("Supa Upload", file.name, true);
+        } catch (e) {
+            addHistoryEntry("Supa Upload", file.name, false);
+            alert((currentLang === 'ar' ? "فشل الرفع: " : "Upload Failed: ") + e.message);
+        }
+    }
+    loadSupabaseManager(); // تحديث القائمة بعد الرفع
   });
-}
 
-clearHistoryBtn.addEventListener("click", () => {
-  historyData = [];
-  renderHistory();
-});
+  supaListContainer.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button");
+    if (!btn || !btn.dataset.action) return;
 
-// ===============================
-// ✅ History & Logs
-// ===============================
+    const name = btn.dataset.name;
+    const action = btn.dataset.action;
 
-const historyList = document.getElementById("history-list");
-const clearHistoryBtn = document.getElementById("clear-history");
-const logsBox = document.getElementById("logs-box");
-const clearLogsBtn = document.getElementById("clear-logs");
+    try {
+        const { data: pub } = supabase.storage.from(BUCKET_NAME).getPublicUrl(name);
+        const publicUrl = pub.publicUrl;
 
-let historyData = [];
-let logsData = [];
-
-function addHistory(entry) {
-  historyData.unshift(entry);
-  if (historyData.length > 30) historyData.pop();
-  renderHistory();
-}
-
-function renderHistory() {
-  historyList.innerHTML = "";
-  historyData.forEach(h => {
-    const div = document.createElement("div");
-    div.className = "history-item";
-    div.innerHTML = `<strong>${h.type}</strong> - ${h.file} - ${h.time}`;
-    historyList.appendChild(div);
-  });
-}
-
-clearHistoryBtn.addEventListener("click", () => {
-  historyData = [];
-  renderHistory();
-});
-
-function log(msg) {
-  const time = new Date().toLocaleTimeString();
-  logsData.unshift(`[${time}] ${msg}`);
-  if (logsData.length > 200) logsData.pop();
-  renderLogs();
-}
-
-function renderLogs() {
-  logsBox.innerHTML = logsData.join("<br>");
-}
-
-clearLogsBtn.addEventListener("click", () => {
-  logsData = [];
-  renderLogs();
-});
-
-// ===============================
-// ✅ Server Health Check
-// ===============================
-
-const serverStatus = document.getElementById("server-status");
-
-async function checkServerHealth() {
-  try {
-    const res = await fetch(`${SERVER_BASE}/health`);
-    if (!res.ok) throw new Error();
-
-    serverStatus.textContent = "Online ✅";
-    serverStatus.style.color = "#4caf50";
-  } catch {
-    serverStatus.textContent = "Offline ❌";
-    serverStatus.style.color = "#ff5252";
-  }
-}
-
-setInterval(checkServerHealth, 15000);
-checkServerHealth();
-
-// ===============================
-// ✅ Navigation Switching
-// ===============================
-
-const sections = document.querySelectorAll(".tool-section");
-const navButtons = document.querySelectorAll(".nav-btn");
-
-navButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.target;
-
-    sections.forEach(sec => sec.style.display = "none");
-    document.getElementById(target).style.display = "block";
-
-    navButtons.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-  });
-});
-
-// ===============================
-// ✅ Language Switching
-// ===============================
-
-const langSwitch = document.getElementById("lang-switch");
-
-langSwitch.addEventListener("click", () => {
-  const current = document.documentElement.getAttribute("lang") || "ar";
-  const next = current === "ar" ? "en" : "ar";
-  document.documentElement.setAttribute("lang", next);
-  applyTranslations(next);
-});
-
-function applyTranslations(lang) {
-  document.querySelectorAll("[data-i18n]").forEach(el => {
-    const key = el.dataset.i18n;
-    if (i18n[lang] && i18n[lang][key]) {
-      el.textContent = i18n[lang][key];
+        if (action === "copy") {
+            await navigator.clipboard.writeText(publicUrl);
+            logMessage(`Copied URL for: ${name}`);
+        } else if (action === "compress") {
+            logMessage(`Compressing from Supabase: ${name}`);
+            await callBackendPdf("compress", { publicUrl }, "compressed-" + name);
+            addHistoryEntry("Supa Compress", name, true);
+        } else if (action === "delete") {
+            if (!confirm(currentLang === 'ar' ? `هل أنت متأكد من حذف الملف: ${name}؟` : `Are you sure you want to delete ${name}?`)) return;
+            logMessage(`Deleting file: ${name}`);
+            const { error } = await supabase.storage.from(BUCKET_NAME).remove([name]);
+            if (error) throw error;
+            addHistoryEntry("Supa Delete", name, true);
+            loadSupabaseManager();
+        }
+    } catch (e) {
+        logMessage(`${action} failed for ${name}: ${e.message}`, "error");
+        alert(e.message);
     }
   });
-}
 
-// ===============================
-// ✅ Initial Load
-// ===============================
-
-document.getElementById("compress-section").style.display = "block";
-applyTranslations("ar");
-
-log("✅ واجهة PDF Master Tool جاهزة للعمل");
 </script>
 </body>
 </html>
-
-  
